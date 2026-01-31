@@ -29,18 +29,18 @@ REASON_DATA = {
 }
 
 # --- 로그인 함수 ---
+# --- 로그인 함수 (숫자/문자 완벽 호환 버전) ---
 def login(username, password):
     try:
-        # Users 시트 읽어오기
         users_df = conn.read(worksheet="Users", ttl=0)
         
-        # [🔴 디버깅용 코드] 이 부분이 화면에 엑셀 내용을 보여줍니다.
-        st.write("▼ 컴퓨터가 읽은 엑셀 데이터 (테스트 후 삭제하세요)")
-        st.dataframe(users_df) 
+        # [핵심] 엑셀의 모든 데이터를 강제로 문자로 바꿈
+        # 1234(숫자) -> "1234"(문자)
+        # 1234.0(실수) -> "1234.0" -> "1234"(소수점 제거)
+        users_df['ID'] = users_df['ID'].astype(str).str.replace(r'\.0$', '', regex=True)
+        users_df['PW'] = users_df['PW'].astype(str).str.replace(r'\.0$', '', regex=True)
         
-        # 데이터 전처리 (강제 문자 변환)
-        users_df['ID'] = users_df['ID'].astype(str).str.strip()
-        users_df['PW'] = users_df['PW'].astype(str).str.strip()
+        # 입력받은 값도 공백 제거
         username = str(username).strip()
         password = str(password).strip()
 
@@ -52,7 +52,7 @@ def login(username, password):
         else:
             return None
     except Exception as e:
-        st.error(f"오류 발생: {e}")
+        st.error(f"로그인 오류: {e}")
         return None
 
 # --- 메인 화면 로직 ---
@@ -187,3 +187,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
