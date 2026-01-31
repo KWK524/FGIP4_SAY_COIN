@@ -358,7 +358,7 @@ def main():
             except Exception:
                 st.error(get_text("fail_msg"))
 
-        # [TAB 3] 코인 사용 (Master Only) - Usage 시트 기록 추가
+        # [TAB 3] 코인 사용 (Master Only)
         if st.session_state['user_role'] == "Master":
             with tabs[2]:
                 st.subheader(get_text("tab3"))
@@ -405,7 +405,7 @@ def main():
 
                             redeem_reason = st.text_input(get_text("redeem_reason_label"))
                             
-                           if st.button(get_text("redeem_btn"), type="primary"):
+                            if st.button(get_text("redeem_btn"), type="primary"):
                                 selected_coins = edited_df[edited_df["Select"] == True]["Coin_No"].tolist()
                                 
                                 if not selected_coins:
@@ -414,12 +414,11 @@ def main():
                                     st.warning(get_text("redeem_reason_warning"))
                                 else:
                                     try:
-                                        # 1. Logs 시트 업데이트 (별표 붙이기)
+                                        # 1. Logs 시트 업데이트
                                         refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                         refresh_logs['Passport_No'] = refresh_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                                         refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-                                        # Usage 시트에 추가할 데이터 리스트
                                         usage_records = []
                                         now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -433,37 +432,33 @@ def main():
                                                 target_idx = idx[0]
                                                 refresh_logs.at[target_idx, 'Coin_No'] = f"{c_no}*"
                                                 
-                                                # Usage 기록 준비
+                                                # Usage 데이터 준비
                                                 usage_records.append({
                                                     "Timestamp": now_ts,
                                                     "Manager_ID": st.session_state['user_id'],
                                                     "Manager_Name": st.session_state['user_name'],
-                                                    "Passport_No": str(clean_search_key), # 문자열 강제 변환
-                                                    "Coin_No": str(c_no),                 # 문자열 강제 변환
+                                                    "Passport_No": str(clean_search_key),
+                                                    "Coin_No": str(c_no),
                                                     "Reason": redeem_reason
                                                 })
 
                                         # 2. Logs 저장
                                         update_data_with_retry(worksheet="Logs", data=refresh_logs)
                                         
-                                        # 3. Usage 시트 업데이트
+                                        # 3. Usage 시트 저장
                                         if usage_records:
                                             new_usage_df = pd.DataFrame(usage_records)
-                                            
-                                            # [핵심 수정] 판다스가 맘대로 숫자로 바꾸지 못하게 '문자열(object)' 타입으로 고정
+                                            # 데이터 타입을 문자열로 고정 (0007 보존)
                                             new_usage_df['Coin_No'] = new_usage_df['Coin_No'].astype(str)
                                             new_usage_df['Passport_No'] = new_usage_df['Passport_No'].astype(str)
 
                                             try:
                                                 existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
-                                                # 기존 데이터도 문자열로 통일
                                                 if not existing_usage.empty:
                                                     existing_usage['Coin_No'] = existing_usage['Coin_No'].astype(str)
                                                     existing_usage['Passport_No'] = existing_usage['Passport_No'].astype(str)
-                                                    
                                                 updated_usage = pd.concat([existing_usage, new_usage_df], ignore_index=True)
                                             except Exception:
-                                                # Usage 시트가 비어있을 때
                                                 updated_usage = new_usage_df
                                             
                                             update_data_with_retry(worksheet="Usage", data=updated_usage)
@@ -473,7 +468,11 @@ def main():
 
                                     except Exception as e:
                                         st.error(f"Error: {e}")
+                        else:
+                            st.info(get_text("no_data"))
+
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
-
