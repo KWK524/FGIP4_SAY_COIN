@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # --- 설정: 페이지 기본 세팅 ---
-st.set_page_config(page_title="FGIP4 S.A.Y COIN", page_icon="🪙")
+st.set_page_config(page_title="FGIP4 S.A.Y COIN", page_icon="🪙", layout="wide")
 
 # --- 다국어 텍스트 사전 ---
 LANG = {
@@ -25,7 +25,7 @@ LANG = {
         "header_reward": "근로자 안전 행동 보상",
         "passport_label": "HSE Passport No", 
         "passport_check_label": "HSE Passport No (Confirm)",
-        "coin_input_guide": "**ℹ️ {}개의 코인 번호를 입력하세요.** (4자리 숫자)", # [추가됨]
+        "coin_input_guide": "**ℹ️ {}개의 코인 번호를 입력하세요.** (4자리 숫자)",
         "coin_input_label": "코인 일련번호 입력 ({}/{}번째)",
         "cat_top": "상위 분류",
         "cat_bot": "하위 분류",
@@ -35,7 +35,7 @@ LANG = {
         "warning_fill": "모든 필수 항목을 입력해주세요.",
         "warning_pass_mismatch": "입력한 두 개의 패스포트 번호가 일치하지 않습니다.",
         "warning_coin_self_dup": "입력한 코인 번호 중 중복된 번호가 있습니다.",
-        "success_msg": "처리되었습니다!",
+        "success_msg": "처리되었습니다! (통계 업데이트 완료)",
         "fail_msg": "처리에 실패했습니다.",
         "duplicate_msg": "이미 지급된 코인 번호가 포함되어 있습니다: {}",
         "ok_btn": "OK",
@@ -74,7 +74,7 @@ LANG = {
         "header_reward": "Safety Action Reward",
         "passport_label": "HSE Passport No",
         "passport_check_label": "HSE Passport No (Confirm)",
-        "coin_input_guide": "**ℹ️ Enter {} coin serial numbers.** (4 digits)", # [Added]
+        "coin_input_guide": "**ℹ️ Enter {} coin serial numbers.** (4 digits)",
         "coin_input_label": "Enter Coin Serial ({}/{})",
         "cat_top": "Category (Top)",
         "cat_bot": "Category (Bottom)",
@@ -84,7 +84,7 @@ LANG = {
         "warning_fill": "Please fill in all required fields.",
         "warning_pass_mismatch": "Passport numbers do not match.",
         "warning_coin_self_dup": "Duplicate coin numbers entered.",
-        "success_msg": "Success!",
+        "success_msg": "Success! (Stats Updated)",
         "fail_msg": "Failed.",
         "duplicate_msg": "Coin already issued: {}",
         "ok_btn": "OK",
@@ -161,6 +161,81 @@ def clean_numeric_str(val, width=0):
     if clean_s.isdigit() and width > 0:
         clean_s = clean_s.zfill(width)
     return clean_s + ("*" if is_used else "")
+
+# --- [신규 기능] 월별 통계 자동 계산 및 업데이트 ---
+def calculate_and_update_stats():
+    try:
+        # 1. 모든 데이터 로드
+        logs_df = read_data_with_retry("Logs", ttl=0)
+        users_df = read_data_with_retry("Users", ttl=0)
+        cats_df = read_data_with_retry("Categories", ttl=0)
+        
+        if logs_df.empty: return
+
+        # 2. Logs에 'Month' 컬럼 생성 (YYYY-MM)
+        # Timestamp 형식이 'YYYY-MM-DD HH:MM:SS'라고 가정
+        logs_df['Month'] = pd.to_datetime(logs_df['Timestamp']).dt.strftime('%Y-%m')
+        
+        # -----------------------------------------------------
+        # [A] Users 시트 통계 업데이트 (관리자별 월별 지급 건수)
+        # -----------------------------------------------------
+        # Pivot Table: 행=Manager_ID, 열=Month, 값=개수
+        user_stats = logs_df.pivot_table(index='Manager_ID', columns='Month', values='Coin_No', aggfunc='count', fill_value=0)
+        
+        # Users 원본과 병합 (ID 기준)
+        # Users 시트의 기본 컬럼들만 남기기 (기존 통계 데이터가 있다면 제거하고 새로 씀)
+        # 기본 컬럼: ID, PW, Name, Role (4개) + 기타 등등. G열(7번째)부터 쓸거니까 앞 6개만 유지하거나, 
+        # 안전하게 ID 기준으로 Merge. 여기서는 ID, Name 같은 기본 정보 유지.
+        
+        # ID가 매칭키이므로 문자열 변환
+        users_df['ID'] = users_df['ID'].apply(lambda x: clean_numeric_str(x))
+        user_stats.index = user_stats.index.astype(str)
+        
+        # 기존 Users 데이터의 기본 컬럼들 보존 (통계 컬럼 제외)
+        # 통계 컬럼은 '202'로 시작하는(연도) 컬럼이라고 가정하거나, G열 이후를 덮어쓰기 위해 로직 구성
+        # 간단하게: Users의 고정 컬럼(A~F라고 가정하거나, 명시된 컬럼) + 통계 컬럼
+        base_user_cols = ['ID', 'PW', 'Name', 'Role'] # 최소 필수 컬럼
+        # 실제 시트에 더 많은 컬럼(예: 소속 등)이 있을 수 있으니, 현재 있는 컬럼 중 날짜 형식이 아닌 것만 유지
+        current_cols = users_df.columns.tolist()
+        keep_cols = [c for c in current_cols if not re.match(r'\d{4}-\d{2}', c)]
+        
+        users_base = users_df[keep_cols].copy()
+        
+        # Merge (Left Join)
+        users_final = pd.merge(users_base, user_stats, left_on='ID', right_index=True, how='left')
+        users_final = users_final.fillna(0) # NaN -> 0
+        
+        # 숫자 컬럼들(통계)은 정수로 변환
+        for col in users_final.columns:
+            if re.match(r'\d{4}-\d{2}', col):
+                users_final[col] = users_final[col].astype(int)
+                
+        # Users 시트 업데이트
+        update_data_with_retry("Users", users_final)
+        
+        # -----------------------------------------------------
+        # [B] Categories 시트 통계 업데이트 (사유별 월별 지급 건수)
+        # -----------------------------------------------------
+        # Pivot Table: 행=[Top_KO, Bottom_KO], 열=Month, 값=개수
+        cat_stats = logs_df.pivot_table(index=['Top_KO', 'Bottom_KO'], columns='Month', values='Coin_No', aggfunc='count', fill_value=0)
+        
+        # Categories 원본 정리
+        keep_cat_cols = [c for c in cats_df.columns.tolist() if not re.match(r'\d{4}-\d{2}', c)]
+        cats_base = cats_df[keep_cat_cols].copy()
+        
+        # Merge (Left Join) - 키 2개 사용
+        cats_final = pd.merge(cats_base, cat_stats, on=['Top_KO', 'Bottom_KO'], how='left')
+        cats_final = cats_final.fillna(0)
+        
+        for col in cats_final.columns:
+            if re.match(r'\d{4}-\d{2}', col):
+                cats_final[col] = cats_final[col].astype(int)
+                
+        # Categories 시트 업데이트
+        update_data_with_retry("Categories", cats_final)
+        
+    except Exception as e:
+        st.error(f"통계 업데이트 중 오류 발생: {e}")
 
 # --- 카테고리 데이터 로드 ---
 @st.cache_data(ttl=600)
@@ -287,14 +362,13 @@ def main():
             col_top_display = "Top_KO" if is_ko else "Top_EN"
             col_bot_display = "Bottom_KO" if is_ko else "Bottom_EN"
             
-            # --- 1. 패스포트 입력 ---
+            # 1. 입력
             col1, col2 = st.columns(2)
             passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
             passport_check = col2.text_input(get_text("passport_check_label"), max_chars=5, key="k_pass_check")
 
-            # --- 2. 2단 분류 ---
+            # 2. 분류
             default_opt = get_text("select_default")
-            
             top_cats = [default_opt] + sorted(cat_df[col_top_display].unique().tolist())
             selected_top = st.selectbox(get_text("cat_top"), top_cats, key="k_top")
 
@@ -305,7 +379,7 @@ def main():
             
             selected_bot = st.selectbox(get_text("cat_bot"), bot_cats, disabled=(selected_top == default_opt), key="k_bot")
 
-            # --- 3. 코인 수량 및 입력창 ---
+            # 3. 수량
             coin_count = 0
             selected_row = None
 
@@ -321,7 +395,6 @@ def main():
             
             entered_coins = []
             if coin_count > 0:
-                # [수정됨] 안내 문구 번역 적용
                 st.markdown(get_text("coin_input_guide", coin_count))
                 cols = st.columns(min(coin_count, 4))
                 for i in range(coin_count):
@@ -382,6 +455,9 @@ def main():
                         new_df = pd.DataFrame(new_rows)
                         updated_data = pd.concat([existing_data, new_df], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
+                        
+                        # [추가] 통계 업데이트 실행
+                        calculate_and_update_stats()
                         
                         show_result_popup(True, clear_on_ok=True)
                         
