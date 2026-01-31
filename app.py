@@ -25,6 +25,7 @@ LANG = {
         "header_reward": "근로자 안전 행동 보상",
         "passport_label": "HSE Passport No", 
         "passport_check_label": "HSE Passport No (Confirm)",
+        "coin_input_guide": "**ℹ️ {}개의 코인 번호를 입력하세요.** (4자리 숫자)", # [추가됨]
         "coin_input_label": "코인 일련번호 입력 ({}/{}번째)",
         "cat_top": "상위 분류",
         "cat_bot": "하위 분류",
@@ -49,7 +50,6 @@ LANG = {
         "redeem_btn": "선택한 코인 사용 처리",
         "redeem_warning": "사용할 코인을 선택해주세요.",
         "redeem_reason_warning": "사용 사유를 입력해주세요.",
-        # 테이블 헤더 (표시용)
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "상위분류", "하위분류", "비고"],
         "redeem_table_title": "▼ 코인 선택 (체크박스)",
         "col_select": "선택",
@@ -74,6 +74,7 @@ LANG = {
         "header_reward": "Safety Action Reward",
         "passport_label": "HSE Passport No",
         "passport_check_label": "HSE Passport No (Confirm)",
+        "coin_input_guide": "**ℹ️ Enter {} coin serial numbers.** (4 digits)", # [Added]
         "coin_input_label": "Enter Coin Serial ({}/{})",
         "cat_top": "Category (Top)",
         "cat_bot": "Category (Bottom)",
@@ -282,7 +283,6 @@ def main():
                 st.error("Categories 시트를 불러올 수 없습니다.")
                 st.stop()
 
-            # 현재 언어에 맞는 컬럼 찾기
             is_ko = (st.session_state['language'] == "KO")
             col_top_display = "Top_KO" if is_ko else "Top_EN"
             col_bot_display = "Bottom_KO" if is_ko else "Bottom_EN"
@@ -292,7 +292,7 @@ def main():
             passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
             passport_check = col2.text_input(get_text("passport_check_label"), max_chars=5, key="k_pass_check")
 
-            # --- 2. 2단 분류 (드롭다운) ---
+            # --- 2. 2단 분류 ---
             default_opt = get_text("select_default")
             
             top_cats = [default_opt] + sorted(cat_df[col_top_display].unique().tolist())
@@ -305,13 +305,12 @@ def main():
             
             selected_bot = st.selectbox(get_text("cat_bot"), bot_cats, disabled=(selected_top == default_opt), key="k_bot")
 
-            # --- 3. 매칭되는 전체 데이터 찾기 & 수량 가져오기 ---
+            # --- 3. 코인 수량 및 입력창 ---
             coin_count = 0
             selected_row = None
 
             if selected_bot != default_opt:
                 try:
-                    # 현재 언어 기준으로 매칭되는 행(Row)을 찾음
                     selected_row = cat_df[
                         (cat_df[col_top_display] == selected_top) & 
                         (cat_df[col_bot_display] == selected_bot)
@@ -322,7 +321,8 @@ def main():
             
             entered_coins = []
             if coin_count > 0:
-                st.markdown(f"**ℹ️ {coin_count}개의 코인 번호를 입력하세요.** (4자리 숫자)")
+                # [수정됨] 안내 문구 번역 적용
+                st.markdown(get_text("coin_input_guide", coin_count))
                 cols = st.columns(min(coin_count, 4))
                 for i in range(coin_count):
                     with cols[i % 4]:
@@ -360,8 +360,6 @@ def main():
                         new_rows = []
                         now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
-                        # [핵심] 한/영 모든 정보 가져오기
-                        # selected_row는 위에서 이미 찾았으므로 거기서 값 추출
                         val_top_ko = selected_row['Top_KO']
                         val_bot_ko = selected_row['Bottom_KO']
                         val_top_en = selected_row['Top_EN']
@@ -374,7 +372,6 @@ def main():
                                 "Manager_Name": st.session_state['user_name'],
                                 "Passport_No": final_passport,
                                 "Coin_No": c_no,
-                                # 4개 컬럼 모두 저장
                                 "Top_KO": val_top_ko,
                                 "Bottom_KO": val_bot_ko,
                                 "Top_EN": val_top_en,
@@ -402,16 +399,13 @@ def main():
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']].copy()
                 
                 if not my_logs.empty:
-                    # 화면 표시 데이터 정제
                     my_logs['Passport_No'] = my_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
                     my_logs['Coin_No'] = my_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                     
-                    # 언어 설정에 따라 보여줄 컬럼 선택
                     is_ko = (st.session_state['language'] == "KO")
                     show_top = "Top_KO" if is_ko else "Top_EN"
                     show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
 
-                    # 컬럼 선택 및 이름 변경
                     display_df = my_logs[['Timestamp', 'Manager_ID', 'Manager_Name', 'Passport_No', 'Coin_No', show_top, show_bot, 'Note']].copy()
                     display_df.columns = LANG[st.session_state['language']]['table_cols']
                     
@@ -444,12 +438,10 @@ def main():
                         st.metric(label="Available Coins", value=f"{count} EA")
 
                         if count > 0:
-                            # 언어에 따른 하위분류(사유) 컬럼 선택
                             is_ko = (st.session_state['language'] == "KO")
                             show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
 
                             target_logs['Coin_No'] = target_logs['Coin_Clean']
-                            # 여기서 DB 컬럼(Top_KO 등)을 뷰 전용 컬럼으로 매핑
                             display_df = target_logs[['Coin_No', 'Timestamp', show_bot, 'Manager_Name']]
                             
                             st.write(get_text("redeem_table_title"))
@@ -461,7 +453,7 @@ def main():
                                     "Select": st.column_config.CheckboxColumn(get_text("col_select"), default=False),
                                     "Coin_No": get_text("col_coin_no"),
                                     "Timestamp": get_text("col_timestamp"),
-                                    show_bot: get_text("col_reason"), # 동적 컬럼 매핑
+                                    show_bot: get_text("col_reason"),
                                     "Manager_Name": get_text("col_manager")
                                 },
                                 disabled=["Coin_No", "Timestamp", show_bot, "Manager_Name"],
