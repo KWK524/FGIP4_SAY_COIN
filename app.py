@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import time
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
@@ -32,6 +33,7 @@ LANG = {
         "warning_fill": "모든 필수 항목(번호, 분류)을 선택해주세요.",
         "success_msg": "처리되었습니다!",
         "fail_msg": "처리에 실패했습니다.",
+        "duplicate_msg": "이미 지급된 코인 번호입니다 (아직 사용 안 됨).",
         "ok_btn": "OK",
         "retry_btn": "재시도",
         "refresh_btn": "내역 새로고침",
@@ -45,13 +47,13 @@ LANG = {
         "redeem_warning": "사용할 코인을 선택해주세요.",
         "redeem_reason_warning": "사용 사유를 입력해주세요.",
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "대분류", "중분류", "소분류", "비고"],
-        # [추가된 부분: 코인 선택 테이블]
         "redeem_table_title": "▼ 코인 선택 (체크박스)",
         "col_select": "선택",
         "col_coin_no": "코인 번호",
         "col_timestamp": "지급 일시",
         "col_reason": "사유",
-        "col_manager": "지급자"
+        "col_manager": "지급자",
+        "api_wait": "통신량이 많아 대기 중... ({}/{})"
     },
     "EN": {
         "title": "FGIP4 S.A.Y COIN",
@@ -77,6 +79,7 @@ LANG = {
         "warning_fill": "Please fill in all required fields.",
         "success_msg": "Success!",
         "fail_msg": "Failed.",
+        "duplicate_msg": "This coin is already issued and active.",
         "ok_btn": "OK",
         "retry_btn": "Retry",
         "refresh_btn": "Refresh",
@@ -90,13 +93,13 @@ LANG = {
         "redeem_warning": "Select coins to redeem.",
         "redeem_reason_warning": "Please enter a reason.",
         "table_cols": ["Time", "ManagerID", "Name", "Passport", "CoinNo", "Main", "Sub", "Detail", "Note"],
-        # [Added: Redeem Table]
         "redeem_table_title": "▼ Select Coins (Checkbox)",
         "col_select": "Select",
         "col_coin_no": "Coin No",
         "col_timestamp": "Date",
         "col_reason": "Reason",
-        "col_manager": "Manager"
+        "col_manager": "Manager",
+        "api_wait": "High traffic, retrying... ({}/{})"
     }
 }
 
@@ -137,18 +140,57 @@ SAFETY_DATA = {
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def get_text(key):
+def get_text(key, *args):
     lang_code = st.session_state.get('language', 'KO')
-    return LANG[lang_code][key]
+    text = LANG[lang_code].get(key, key)
+    if args:
+        return text.format(*args)
+    return text
 
-# --- 로그인 함수 (Role 추가) ---
+# --- 재시도 로직이 포함된 데이터 읽기/쓰기 함수 ---
+def read_data_with_retry(worksheet_name, ttl=0, max_retries=5):
+    retries = 0
+    while retries < max_retries:
+        try:
+            return conn.read(worksheet=worksheet_name, ttl=ttl)
+        except Exception as e:
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                retries += 1
+                wait_time = 2 ** retries
+                st.toast(get_text("api_wait", retries, max_retries), icon="⏳")
+                time.sleep(wait_time)
+            else:
+                raise e
+    raise Exception("API Quota Exceeded. Please try again later.")
+
+def update_data_with_retry(worksheet_name, data, max_retries=5):
+    retries = 0
+    while retries < max_retries:
+        try:
+            conn.update(worksheet=worksheet_name, data=data)
+            return True
+        except Exception as e:
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                retries += 1
+                wait_time = 2 ** retries
+                st.toast(get_text("api_wait", retries, max_retries), icon="⏳")
+                time.sleep(wait_time)
+            else:
+                raise e
+    return False
+
+# --- 로그인 함수 (캐싱 적용) ---
+@st.cache_data(ttl=600) 
+def load_users_data():
+    return read_data_with_retry(worksheet="Users", ttl=600)
+
 def login(username, password):
     try:
-        users_df = conn.read(worksheet="Users", ttl=0)
+        users_df = load_users_data()
+        
         users_df['ID'] = users_df['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         users_df['PW'] = users_df['PW'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         
-        # Role 컬럼이 없으면 빈 문자열로 처리
         if 'Role' not in users_df.columns:
             users_df['Role'] = ""
         else:
@@ -160,24 +202,18 @@ def login(username, password):
             return user.iloc[0]['Name'], user.iloc[0]['Role']
         return None, None
     except Exception as e:
-        print(e)
+        st.error(f"Login Error: {e}")
         return None, None
 
-# --- 입력 필드 초기화 함수 ---
 def clear_inputs():
-    # Session State의 키값을 초기화
     st.session_state['k_passport'] = ""
     st.session_state['k_coin'] = ""
     st.session_state['k_note'] = ""
-    # 드롭다운 초기화를 위해 index 변경 등의 로직이 필요할 수 있으나,
-    # 여기서는 input box 위주로 초기화. 드롭다운은 기본값으로 돌아감.
 
-# --- 팝업(Dialog) 함수 ---
 @st.dialog("알림")
 def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
     if is_success:
         st.success(get_text("success_msg"))
-        # OK 버튼 누르면 입력창 비우고 닫기
         if st.button(get_text("ok_btn")):
             if clear_on_ok:
                 clear_inputs()
@@ -204,7 +240,7 @@ def main():
         if st.session_state['logged_in']:
             st.divider()
             role_display = "Admin" if st.session_state['user_role'] == "Master" else "User"
-            st.info(get_text("welcome").format(st.session_state['user_name'], role_display))
+            st.info(get_text("welcome", st.session_state['user_name'], role_display))
             if st.button(get_text("logout_btn")):
                 st.session_state['logged_in'] = False
                 st.session_state['user_role'] = ""
@@ -219,6 +255,7 @@ def main():
             submit = st.form_submit_button(get_text("login_btn"))
             
             if submit:
+                load_users_data.clear()
                 user_name, user_role = login(username, password)
                 if user_name:
                     st.session_state['logged_in'] = True
@@ -233,27 +270,22 @@ def main():
     else:
         st.title(get_text("title"))
         
-        # 탭 구성: 권한에 따라 다르게 표시
         tabs_list = [get_text("tab1"), get_text("tab2")]
         if st.session_state['user_role'] == "Master":
             tabs_list.append(get_text("tab3"))
             
         tabs = st.tabs(tabs_list)
 
-        # ---------------------------------------------------------
         # [TAB 1] 코인 지급
-        # ---------------------------------------------------------
         with tabs[0]:
             st.subheader(get_text("header_reward"))
             current_data = SAFETY_DATA[st.session_state['language']]
             default_opt = get_text("select_default")
 
-            # Session State key를 사용하여 값 초기화 제어
             col1, col2 = st.columns(2)
             passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
             coin_no = col2.text_input(get_text("coin_label"), max_chars=4, key="k_coin")
 
-            # 3단 드롭다운 (초기화 편의를 위해 간단하게 구성)
             main_cats = [default_opt] + list(current_data.keys())
             selected_main = st.selectbox(get_text("cat_main"), main_cats)
 
@@ -274,6 +306,7 @@ def main():
                     selected_main == default_opt or selected_sub == default_opt):
                     st.warning(get_text("warning_fill"))
                 else:
+                    # [수정] 데이터 생성 전에 먼저 중복 확인 및 저장 로직 수행
                     new_data = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Manager_ID": st.session_state['user_id'],
@@ -287,24 +320,36 @@ def main():
                     }])
                     
                     try:
-                        existing_data = conn.read(worksheet="Logs", ttl=0)
+                        # 1. 기존 데이터 읽기
+                        existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
+                        
+                        # 2. 중복 검사 (별표가 없는 순수 코인번호와 비교)
+                        if not existing_data.empty:
+                            # 엑셀 데이터 전처리
+                            check_series = existing_data['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                            input_coin = str(coin_no).strip()
+                            
+                            # 존재하는 값 중에 입력값과 정확히 일치하는 게 있는지 확인
+                            # (1234* 는 1234와 다르므로 통과됨)
+                            if input_coin in check_series.values:
+                                raise Exception(get_text("duplicate_msg"))
+
+                        # 3. 데이터 합치기 및 저장
                         updated_data = pd.concat([existing_data, new_data], ignore_index=True)
-                        conn.update(worksheet="Logs", data=updated_data)
-                        show_result_popup(True, clear_on_ok=True) # 성공 시 입력창 초기화 트리거
+                        update_data_with_retry(worksheet="Logs", data=updated_data)
+                        show_result_popup(True, clear_on_ok=True)
+                        
                     except Exception as e:
                         show_result_popup(False, str(e))
 
-        # ---------------------------------------------------------
         # [TAB 2] 지급 기록
-        # ---------------------------------------------------------
         with tabs[1]:
             st.subheader(get_text("header_history"))
             if st.button(get_text("refresh_btn"), key="hist_refresh"):
                 st.rerun()
                 
             try:
-                all_logs = conn.read(worksheet="Logs", ttl=0)
-                # Manager_ID 기준으로 필터
+                all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']]
                 
                 if not my_logs.empty:
@@ -315,9 +360,7 @@ def main():
             except Exception:
                 st.error(get_text("fail_msg"))
 
-        # ---------------------------------------------------------
-        # [TAB 3] 코인 사용 (Master Only) - 번역 적용 버전
-        # ---------------------------------------------------------
+        # [TAB 3] 코인 사용 (Master Only)
         if st.session_state['user_role'] == "Master":
             with tabs[2]:
                 st.subheader(get_text("tab3"))
@@ -328,9 +371,8 @@ def main():
 
                 if search_passport:
                     try:
-                        all_logs = conn.read(worksheet="Logs", ttl=0)
+                        all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                         
-                        # 전처리
                         all_logs['Passport_No'] = all_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                         all_logs['Coin_No'] = all_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                         clean_search_key = str(search_passport).strip()
@@ -346,11 +388,9 @@ def main():
                         if count > 0:
                             display_df = target_logs[['Coin_No', 'Timestamp', 'Detail_Cat', 'Manager_Name']]
                             
-                            # [수정됨] 제목 번역 적용
                             st.write(get_text("redeem_table_title"))
                             display_df.insert(0, "Select", False)
                             
-                            # [수정됨] 컬럼 헤더 번역 적용
                             edited_df = st.data_editor(
                                 display_df,
                                 column_config={
@@ -376,7 +416,7 @@ def main():
                                     st.warning(get_text("redeem_reason_warning"))
                                 else:
                                     try:
-                                        refresh_logs = conn.read(worksheet="Logs", ttl=0)
+                                        refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                         refresh_logs['Passport_No'] = refresh_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                                         refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
@@ -393,7 +433,7 @@ def main():
                                                 if current_note == "nan": current_note = ""
                                                 refresh_logs.at[target_idx, 'Note'] = f"{current_note} [Used: {redeem_reason}]"
 
-                                        conn.update(worksheet="Logs", data=refresh_logs)
+                                        update_data_with_retry(worksheet="Logs", data=refresh_logs)
                                         st.success(f"{len(selected_coins)} EA - {get_text('success_msg')}")
                                         st.rerun()
 
@@ -407,5 +447,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
