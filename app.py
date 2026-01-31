@@ -147,7 +147,7 @@ def get_text(key, *args):
         return text.format(*args)
     return text
 
-# --- [수정 완료] 재시도 로직 함수 (변수명 worksheet로 통일) ---
+# --- 재시도 로직 함수 ---
 def read_data_with_retry(worksheet, ttl=0, max_retries=5):
     retries = 0
     while retries < max_retries:
@@ -205,10 +205,16 @@ def login(username, password):
         st.error(f"Login Error: {e}")
         return None, None
 
+# --- 입력 필드 & 드롭다운 초기화 함수 ---
 def clear_inputs():
     st.session_state['k_passport'] = ""
     st.session_state['k_coin'] = ""
     st.session_state['k_note'] = ""
+    
+    default_val = get_text("select_default")
+    st.session_state['k_main'] = default_val
+    st.session_state['k_sub'] = default_val
+    st.session_state['k_detail'] = default_val
 
 @st.dialog("알림")
 def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
@@ -287,17 +293,17 @@ def main():
             coin_no = col2.text_input(get_text("coin_label"), max_chars=4, key="k_coin")
 
             main_cats = [default_opt] + list(current_data.keys())
-            selected_main = st.selectbox(get_text("cat_main"), main_cats)
+            selected_main = st.selectbox(get_text("cat_main"), main_cats, key="k_main")
 
             sub_cats = [default_opt]
             if selected_main != default_opt:
                 sub_cats += list(current_data[selected_main].keys())
-            selected_sub = st.selectbox(get_text("cat_sub"), sub_cats, disabled=(selected_main == default_opt))
+            selected_sub = st.selectbox(get_text("cat_sub"), sub_cats, disabled=(selected_main == default_opt), key="k_sub")
 
             detail_cats = [default_opt]
             if selected_sub != default_opt and selected_main != default_opt:
                 detail_cats += current_data[selected_main][selected_sub]
-            selected_detail = st.selectbox(get_text("cat_detail"), detail_cats, disabled=(selected_sub == default_opt))
+            selected_detail = st.selectbox(get_text("cat_detail"), detail_cats, disabled=(selected_sub == default_opt), key="k_detail")
 
             note = st.text_area(get_text("note_label"), height=80, key="k_note")
 
@@ -319,18 +325,14 @@ def main():
                     }])
                     
                     try:
-                        # 1. 기존 데이터 읽기
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
-                        # 2. 중복 검사
                         if not existing_data.empty:
                             check_series = existing_data['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                             input_coin = str(coin_no).strip()
-                            
                             if input_coin in check_series.values:
                                 raise Exception(get_text("duplicate_msg"))
 
-                        # 3. 저장
                         updated_data = pd.concat([existing_data, new_data], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
                         show_result_popup(True, clear_on_ok=True)
@@ -356,7 +358,7 @@ def main():
             except Exception:
                 st.error(get_text("fail_msg"))
 
-        # [TAB 3] 코인 사용 (Master Only)
+        # [TAB 3] 코인 사용 (Master Only) - Usage 시트 기록 추가
         if st.session_state['user_role'] == "Master":
             with tabs[2]:
                 st.subheader(get_text("tab3"))
@@ -412,9 +414,14 @@ def main():
                                     st.warning(get_text("redeem_reason_warning"))
                                 else:
                                     try:
+                                        # 1. Logs 시트 업데이트 (별표 붙이기)
                                         refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                         refresh_logs['Passport_No'] = refresh_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                                         refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+
+                                        # Usage 시트에 추가할 데이터 리스트
+                                        usage_records = []
+                                        now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                                         for c_no in selected_coins:
                                             idx = refresh_logs[
@@ -425,11 +432,32 @@ def main():
                                             if not idx.empty:
                                                 target_idx = idx[0]
                                                 refresh_logs.at[target_idx, 'Coin_No'] = f"{c_no}*"
-                                                current_note = str(refresh_logs.at[target_idx, 'Note'])
-                                                if current_note == "nan": current_note = ""
-                                                refresh_logs.at[target_idx, 'Note'] = f"{current_note} [Used: {redeem_reason}]"
+                                                
+                                                # Usage 기록 준비
+                                                usage_records.append({
+                                                    "Timestamp": now_ts,
+                                                    "Manager_ID": st.session_state['user_id'],
+                                                    "Manager_Name": st.session_state['user_name'],
+                                                    "Passport_No": clean_search_key,
+                                                    "Coin_No": c_no,
+                                                    "Reason": redeem_reason
+                                                })
 
+                                        # 2. Logs 저장
                                         update_data_with_retry(worksheet="Logs", data=refresh_logs)
+                                        
+                                        # 3. Usage 시트 업데이트 (새로 추가)
+                                        if usage_records:
+                                            new_usage_df = pd.DataFrame(usage_records)
+                                            try:
+                                                existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
+                                                updated_usage = pd.concat([existing_usage, new_usage_df], ignore_index=True)
+                                            except Exception:
+                                                # Usage 시트가 비어있거나 처음일 때
+                                                updated_usage = new_usage_df
+                                            
+                                            update_data_with_retry(worksheet="Usage", data=updated_usage)
+
                                         st.success(f"{len(selected_coins)} EA - {get_text('success_msg')}")
                                         st.rerun()
 
