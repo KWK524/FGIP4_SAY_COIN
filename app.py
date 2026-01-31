@@ -147,12 +147,12 @@ def get_text(key, *args):
         return text.format(*args)
     return text
 
-# --- 재시도 로직이 포함된 데이터 읽기/쓰기 함수 ---
-def read_data_with_retry(worksheet_name, ttl=0, max_retries=5):
+# --- [수정 완료] 재시도 로직 함수 (변수명 worksheet로 통일) ---
+def read_data_with_retry(worksheet, ttl=0, max_retries=5):
     retries = 0
     while retries < max_retries:
         try:
-            return conn.read(worksheet=worksheet_name, ttl=ttl)
+            return conn.read(worksheet=worksheet, ttl=ttl)
         except Exception as e:
             if "429" in str(e) or "Quota exceeded" in str(e):
                 retries += 1
@@ -163,11 +163,11 @@ def read_data_with_retry(worksheet_name, ttl=0, max_retries=5):
                 raise e
     raise Exception("API Quota Exceeded. Please try again later.")
 
-def update_data_with_retry(worksheet_name, data, max_retries=5):
+def update_data_with_retry(worksheet, data, max_retries=5):
     retries = 0
     while retries < max_retries:
         try:
-            conn.update(worksheet=worksheet_name, data=data)
+            conn.update(worksheet=worksheet, data=data)
             return True
         except Exception as e:
             if "429" in str(e) or "Quota exceeded" in str(e):
@@ -179,7 +179,7 @@ def update_data_with_retry(worksheet_name, data, max_retries=5):
                 raise e
     return False
 
-# --- 로그인 함수 (캐싱 적용) ---
+# --- 로그인 함수 ---
 @st.cache_data(ttl=600) 
 def load_users_data():
     return read_data_with_retry(worksheet="Users", ttl=600)
@@ -306,7 +306,6 @@ def main():
                     selected_main == default_opt or selected_sub == default_opt):
                     st.warning(get_text("warning_fill"))
                 else:
-                    # [수정] 데이터 생성 전에 먼저 중복 확인 및 저장 로직 수행
                     new_data = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Manager_ID": st.session_state['user_id'],
@@ -323,18 +322,15 @@ def main():
                         # 1. 기존 데이터 읽기
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
-                        # 2. 중복 검사 (별표가 없는 순수 코인번호와 비교)
+                        # 2. 중복 검사
                         if not existing_data.empty:
-                            # 엑셀 데이터 전처리
                             check_series = existing_data['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                             input_coin = str(coin_no).strip()
                             
-                            # 존재하는 값 중에 입력값과 정확히 일치하는 게 있는지 확인
-                            # (1234* 는 1234와 다르므로 통과됨)
                             if input_coin in check_series.values:
                                 raise Exception(get_text("duplicate_msg"))
 
-                        # 3. 데이터 합치기 및 저장
+                        # 3. 저장
                         updated_data = pd.concat([existing_data, new_data], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
                         show_result_popup(True, clear_on_ok=True)
