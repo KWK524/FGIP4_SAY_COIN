@@ -302,8 +302,8 @@ def main():
             except Exception:
                 st.error(get_text("fail_msg"))
 
-        # ---------------------------------------------------------
-        # [TAB 3] 코인 사용 (Master Only)
+# ---------------------------------------------------------
+        # [TAB 3] 코인 사용 (Master Only) - 수정된 버전
         # ---------------------------------------------------------
         if st.session_state['user_role'] == "Master":
             with tabs[2]:
@@ -315,15 +315,22 @@ def main():
                 do_search = col_s2.button(get_text("redeem_search_btn"), use_container_width=True)
 
                 # 검색 실행 및 결과 표시
+                # (엔터키를 치거나 버튼을 눌렀을 때 실행)
                 if search_passport:
                     try:
                         all_logs = conn.read(worksheet="Logs", ttl=0)
                         
-                        # 중요: 코인번호를 문자열로 변환하고, '*'가 포함되지 않은(사용 안 된) 코인만 필터링
-                        all_logs['Coin_No'] = all_logs['Coin_No'].astype(str)
+                        # [🔴 핵심 수정] 데이터 전처리: 소수점(.0) 제거 및 공백 제거
+                        # 엑셀의 12345.0 -> "12345" 로 강제 변환
+                        all_logs['Passport_No'] = all_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                        all_logs['Coin_No'] = all_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                         
+                        # 검색어도 똑같이 공백 제거
+                        clean_search_key = str(search_passport).strip()
+                        
+                        # 필터링: 패스포트 일치 AND 코인번호에 별표(*)가 없는 것
                         target_logs = all_logs[
-                            (all_logs['Passport_No'].astype(str) == search_passport) & 
+                            (all_logs['Passport_No'] == clean_search_key) & 
                             (~all_logs['Coin_No'].str.contains(r'\*', regex=True))
                         ].copy()
 
@@ -332,13 +339,10 @@ def main():
                         st.metric(label="Available Coins", value=f"{count} EA")
 
                         if count > 0:
-                            # 2. 체크박스 목록 표시 (Coin_No가 맨 앞으로)
-                            # 표시할 컬럼 정리
+                            # 2. 체크박스 목록 표시
                             display_df = target_logs[['Coin_No', 'Timestamp', 'Detail_Cat', 'Manager_Name']]
                             
                             st.write("▼ 코인 선택 (체크박스)")
-                            # Data Editor로 체크박스 구현
-                            # 사용자가 선택할 수 있도록 'Select' 컬럼 추가 (기본값 False)
                             display_df.insert(0, "Select", False)
                             
                             edited_df = st.data_editor(
@@ -355,11 +359,10 @@ def main():
                                 use_container_width=True
                             )
 
-                            # 3. 사용 처리 (사유 입력)
+                            # 3. 사용 처리
                             redeem_reason = st.text_input(get_text("redeem_reason_label"))
                             
                             if st.button(get_text("redeem_btn"), type="primary"):
-                                # 선택된 행 찾기
                                 selected_coins = edited_df[edited_df["Select"] == True]["Coin_No"].tolist()
                                 
                                 if not selected_coins:
@@ -367,40 +370,43 @@ def main():
                                 elif not redeem_reason:
                                     st.warning(get_text("redeem_reason_warning"))
                                 else:
-                                    # DB 업데이트 로직
-                                    # 원본 all_logs에서 해당 Coin_No를 찾아서 * 붙이기
-                                    # 주의: 동명이인 등 방지를 위해 Passport와 Coin_No 둘 다 매칭 권장하지만, Coin_No 유니크 가정시 Coin_No로 처리
                                     try:
-                                        # 전체 로그 다시 불러와서 업데이트 (동시성 안전)
+                                        # 업데이트를 위해 다시 로드 (동시성 안전)
                                         refresh_logs = conn.read(worksheet="Logs", ttl=0)
-                                        refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str)
+                                        
+                                        # 여기서도 똑같이 전처리 (매칭을 위해)
+                                        refresh_logs['Passport_No'] = refresh_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                                        refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
                                         for c_no in selected_coins:
-                                            # 해당 코인을 찾아서
+                                            # 해당 코인 찾기 (패스포트 & 코인번호 일치)
                                             idx = refresh_logs[
                                                 (refresh_logs['Coin_No'] == c_no) & 
-                                                (refresh_logs['Passport_No'].astype(str) == search_passport)
+                                                (refresh_logs['Passport_No'] == clean_search_key)
                                             ].index
                                             
                                             if not idx.empty:
-                                                # * 추가 (사용 처리)
-                                                # 비고란에 사용 내역도 추가해주면 좋음 (선택사항)
-                                                refresh_logs.at[idx[0], 'Coin_No'] = f"{c_no}*"
-                                                current_note = str(refresh_logs.at[idx[0], 'Note'])
-                                                refresh_logs.at[idx[0], 'Note'] = f"{current_note} [Used: {redeem_reason}]"
+                                                # 별표(*) 붙이기
+                                                target_idx = idx[0]
+                                                refresh_logs.at[target_idx, 'Coin_No'] = f"{c_no}*"
+                                                
+                                                current_note = str(refresh_logs.at[target_idx, 'Note'])
+                                                if current_note == "nan": current_note = ""
+                                                refresh_logs.at[target_idx, 'Note'] = f"{current_note} [Used: {redeem_reason}]"
 
                                         conn.update(worksheet="Logs", data=refresh_logs)
-                                        st.success(f"{len(selected_coins)}개 코인 사용 처리 완료!")
+                                        st.success(f"{len(selected_coins)}개 사용 처리 완료!")
                                         st.rerun()
 
                                     except Exception as e:
                                         st.error(f"업데이트 실패: {e}")
 
                         else:
-                            st.info("사용 가능한 코인이 없습니다.")
+                            st.info(get_text("no_data"))
 
                     except Exception as e:
-                        st.error(f"조회 중 오류 발생: {e}")
+                        st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
+
