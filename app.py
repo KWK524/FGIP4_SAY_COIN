@@ -9,8 +9,8 @@ st.set_page_config(page_title="S.A.Y COIN System", page_icon="🪙")
 # --- 다국어 텍스트 사전 (Language Dictionary) ---
 LANG = {
     "KO": {
-        "title": "S.A.Y COIN 지급 시스템",
-        "login_title": "🏗️ S.A.Y COIN 로그인",
+        "title": "FGIP4 S.A.Y COIN",
+        "login_title": "🏗️ FGIP4 로그인",
         "id_label": "아이디",
         "pw_label": "비밀번호",
         "login_btn": "로그인",
@@ -39,8 +39,8 @@ LANG = {
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "대분류", "중분류", "소분류", "비고"]
     },
     "EN": {
-        "title": "S.A.Y COIN System",
-        "login_title": "🏗️ S.A.Y COIN Login",
+        "title": "FGIP4 S.A.Y COIN",
+        "login_title": "🏗️ FGIP4 Login",
         "id_label": "ID",
         "pw_label": "Password",
         "login_btn": "Login",
@@ -292,4 +292,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
