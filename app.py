@@ -33,15 +33,26 @@ def login(username, password):
     try:
         # Users 시트 읽어오기
         users_df = conn.read(worksheet="Users", ttl=0)
-        # ID와 PW가 일치하는지 확인
-        user = users_df[(users_df['ID'] == username) & (users_df['PW'].astype(str) == password)]
+        
+        # [🔴 디버깅용 코드] 이 부분이 화면에 엑셀 내용을 보여줍니다.
+        st.write("▼ 컴퓨터가 읽은 엑셀 데이터 (테스트 후 삭제하세요)")
+        st.dataframe(users_df) 
+        
+        # 데이터 전처리 (강제 문자 변환)
+        users_df['ID'] = users_df['ID'].astype(str).str.strip()
+        users_df['PW'] = users_df['PW'].astype(str).str.strip()
+        username = str(username).strip()
+        password = str(password).strip()
+
+        # 비교
+        user = users_df[(users_df['ID'] == username) & (users_df['PW'] == password)]
         
         if not user.empty:
             return user.iloc[0]['Name']
         else:
             return None
     except Exception as e:
-        st.error(f"데이터베이스 연결 오류: {e}")
+        st.error(f"오류 발생: {e}")
         return None
 
 # --- 메인 화면 로직 ---
@@ -174,4 +185,5 @@ def main():
                 st.error("데이터를 불러오는 중 오류가 발생했습니다.")
 
 if __name__ == "__main__":
+
     main()
