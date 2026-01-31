@@ -31,7 +31,7 @@ LANG = {
         "warning_fill": "모든 필수 항목(번호, 분류)을 선택해주세요.",
         "success_msg": "저장되었습니다!",
         "fail_msg": "저장에 실패했습니다.",
-        "home_btn": "홈 화면으로",
+        "home_btn": "OK",
         "retry_btn": "재시도",
         "refresh_btn": "내역 새로고침",
         "no_data": "아직 지급한 기록이 없습니다.",
@@ -40,7 +40,7 @@ LANG = {
     },
     "EN": {
         "title": "S.A.Y COIN System",
-        "login_title": "🏗️ Login",
+        "login_title": "🏗️ S.A.Y COIN Login",
         "id_label": "ID",
         "pw_label": "Password",
         "login_btn": "Login",
@@ -61,7 +61,7 @@ LANG = {
         "warning_fill": "Please fill in all required fields.",
         "success_msg": "Saved Successfully!",
         "fail_msg": "Save Failed.",
-        "home_btn": "Return Home",
+        "home_btn": "OK",
         "retry_btn": "Retry",
         "refresh_btn": "Refresh",
         "no_data": "No records found.",
@@ -292,3 +292,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
