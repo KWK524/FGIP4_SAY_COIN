@@ -23,8 +23,8 @@ LANG = {
         "tab2": "📋 지급 기록",
         "tab3": "🏪 코인 사용(상품교환)",
         "header_reward": "근로자 안전 행동 보상",
-        "passport_label": "HSE Passport No",
-        "passport_check_label": "Passport No 확인 (재입력)",
+        "passport_label": "HSE Passport No", 
+        "passport_check_label": "HSE Passport No (Confirm)",
         "coin_input_label": "코인 일련번호 입력 ({}/{}번째)",
         "cat_top": "상위 분류",
         "cat_bot": "하위 분류",
@@ -32,7 +32,8 @@ LANG = {
         "note_label": "비고 (선택사항)",
         "submit_btn": "지급 등록",
         "warning_fill": "모든 필수 항목을 입력해주세요.",
-        "warning_pass_mismatch": "패스포트 번호가 서로 일치하지 않습니다.",
+        "warning_pass_mismatch": "입력한 두 개의 패스포트 번호가 일치하지 않습니다.",
+        "warning_coin_self_dup": "입력한 코인 번호 중 중복된 번호가 있습니다.",
         "success_msg": "처리되었습니다!",
         "fail_msg": "처리에 실패했습니다.",
         "duplicate_msg": "이미 지급된 코인 번호가 포함되어 있습니다: {}",
@@ -41,13 +42,14 @@ LANG = {
         "refresh_btn": "내역 새로고침",
         "no_data": "데이터가 없습니다.",
         "header_history": "나의 지급 내역",
-        "redeem_search_label": "근로자 조회 (Passport No)",
+        "redeem_search_label": "근로자 조회 (HSE Passport No)",
         "redeem_search_btn": "조회",
         "redeem_info": "보유 코인: {} 개",
         "redeem_reason_label": "사용 사유",
         "redeem_btn": "선택한 코인 사용 처리",
         "redeem_warning": "사용할 코인을 선택해주세요.",
         "redeem_reason_warning": "사용 사유를 입력해주세요.",
+        # 테이블 헤더 (표시용)
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "상위분류", "하위분류", "비고"],
         "redeem_table_title": "▼ 코인 선택 (체크박스)",
         "col_select": "선택",
@@ -71,7 +73,7 @@ LANG = {
         "tab3": "🏪 Redeem Coin",
         "header_reward": "Safety Action Reward",
         "passport_label": "HSE Passport No",
-        "passport_check_label": "Confirm Passport No",
+        "passport_check_label": "HSE Passport No (Confirm)",
         "coin_input_label": "Enter Coin Serial ({}/{})",
         "cat_top": "Category (Top)",
         "cat_bot": "Category (Bottom)",
@@ -80,6 +82,7 @@ LANG = {
         "submit_btn": "Submit",
         "warning_fill": "Please fill in all required fields.",
         "warning_pass_mismatch": "Passport numbers do not match.",
+        "warning_coin_self_dup": "Duplicate coin numbers entered.",
         "success_msg": "Success!",
         "fail_msg": "Failed.",
         "duplicate_msg": "Coin already issued: {}",
@@ -88,7 +91,7 @@ LANG = {
         "refresh_btn": "Refresh",
         "no_data": "No data found.",
         "header_history": "My History",
-        "redeem_search_label": "Search Worker (Passport No)",
+        "redeem_search_label": "Search Worker (HSE Passport No)",
         "redeem_search_btn": "Search",
         "redeem_info": "Owned Coins: {}",
         "redeem_reason_label": "Redeem Reason",
@@ -158,18 +161,14 @@ def clean_numeric_str(val, width=0):
         clean_s = clean_s.zfill(width)
     return clean_s + ("*" if is_used else "")
 
-# --- 카테고리 데이터 로드 (Categories 시트에서) ---
+# --- 카테고리 데이터 로드 ---
 @st.cache_data(ttl=600)
 def load_category_data():
     try:
         df = read_data_with_retry(worksheet="Categories", ttl=600)
-        # E열(Quantity)이 없으면 기본값 1로 생성
         if 'Quantity' not in df.columns:
             df['Quantity'] = 1
-        
-        # Quantity 컬럼을 숫자로 변환 (에러 방지)
         df['Quantity'] = pd.to_numeric(df['Quantity'], errors='coerce').fillna(1).astype(int)
-        
         return df
     except Exception:
         return pd.DataFrame()
@@ -274,59 +273,54 @@ def main():
             tabs_list.append(get_text("tab3"))
         tabs = st.tabs(tabs_list)
 
-        # [TAB 1] 코인 지급 (E열 수량 연동)
+        # [TAB 1] 코인 지급
         with tabs[0]:
             st.subheader(get_text("header_reward"))
             
-            # 카테고리 데이터 로드
             cat_df = load_category_data()
             if cat_df.empty:
                 st.error("Categories 시트를 불러올 수 없습니다.")
                 st.stop()
 
-            # 언어에 따른 컬럼 선택
-            lang_suffix = "_KO" if st.session_state['language'] == "KO" else "_EN"
-            col_top = f"Top{lang_suffix}"
-            col_bot = f"Bottom{lang_suffix}"
+            # 현재 언어에 맞는 컬럼 찾기
+            is_ko = (st.session_state['language'] == "KO")
+            col_top_display = "Top_KO" if is_ko else "Top_EN"
+            col_bot_display = "Bottom_KO" if is_ko else "Bottom_EN"
             
-            # --- 1. 패스포트 입력 및 확인 ---
+            # --- 1. 패스포트 입력 ---
             col1, col2 = st.columns(2)
-            passport_no = col1.text_input(get_text("passport_label"), max_chars=10, key="k_passport")
-            passport_check = col2.text_input(get_text("passport_check_label"), max_chars=10, key="k_pass_check", type="password")
+            passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
+            passport_check = col2.text_input(get_text("passport_check_label"), max_chars=5, key="k_pass_check")
 
-            # --- 2. 2단 분류 ---
+            # --- 2. 2단 분류 (드롭다운) ---
             default_opt = get_text("select_default")
             
-            top_cats = [default_opt] + sorted(cat_df[col_top].unique().tolist())
+            top_cats = [default_opt] + sorted(cat_df[col_top_display].unique().tolist())
             selected_top = st.selectbox(get_text("cat_top"), top_cats, key="k_top")
 
             bot_cats = [default_opt]
             if selected_top != default_opt:
-                filtered_df = cat_df[cat_df[col_top] == selected_top]
-                bot_cats += sorted(filtered_df[col_bot].unique().tolist())
+                filtered_df = cat_df[cat_df[col_top_display] == selected_top]
+                bot_cats += sorted(filtered_df[col_bot_display].unique().tolist())
             
             selected_bot = st.selectbox(get_text("cat_bot"), bot_cats, disabled=(selected_top == default_opt), key="k_bot")
 
-            # --- 3. E열(Quantity)에서 수량 가져오기 ---
+            # --- 3. 매칭되는 전체 데이터 찾기 & 수량 가져오기 ---
             coin_count = 0
+            selected_row = None
+
             if selected_bot != default_opt:
-                # 선택된 항목의 행(Row) 찾기
                 try:
-                    target_row = cat_df[
-                        (cat_df[col_top] == selected_top) & 
-                        (cat_df[col_bot] == selected_bot)
-                    ]
-                    if not target_row.empty:
-                        # E열 값 읽기
-                        coin_count = int(target_row.iloc[0]['Quantity'])
-                    else:
-                        coin_count = 1
+                    # 현재 언어 기준으로 매칭되는 행(Row)을 찾음
+                    selected_row = cat_df[
+                        (cat_df[col_top_display] == selected_top) & 
+                        (cat_df[col_bot_display] == selected_bot)
+                    ].iloc[0]
+                    coin_count = int(selected_row['Quantity'])
                 except:
                     coin_count = 1
             
-            # 코인 입력창 생성
             entered_coins = []
-            
             if coin_count > 0:
                 st.markdown(f"**ℹ️ {coin_count}개의 코인 번호를 입력하세요.** (4자리 숫자)")
                 cols = st.columns(min(coin_count, 4))
@@ -342,36 +336,37 @@ def main():
             note = st.text_area(get_text("note_label"), height=80, key="k_note")
 
             if st.button(get_text("submit_btn"), type="primary", use_container_width=True):
-                # 유효성 검사
                 if (not passport_no or not passport_check or 
                     selected_top == default_opt or selected_bot == default_opt or
                     any(c == "" for c in entered_coins)):
                     st.warning(get_text("warning_fill"))
                 elif passport_no != passport_check:
                     st.warning(get_text("warning_pass_mismatch"))
+                elif len(entered_coins) != len(set(entered_coins)):
+                    st.warning(get_text("warning_coin_self_dup"))
                 else:
-                    # HSE 접두어 처리
-                    final_passport = str(passport_no).strip()
-                    if not final_passport.upper().startswith("HSE"):
-                        final_passport = "HSE" + final_passport
-                    
-                    # 코인 번호 정제
+                    final_passport = clean_numeric_str(passport_no, 5)
                     final_coins = [clean_numeric_str(c, 4) for c in entered_coins]
 
                     try:
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
-                        # 중복 검사
                         if not existing_data.empty:
                             existing_coins = existing_data['Coin_No'].apply(lambda x: clean_numeric_str(x, 4)).tolist()
                             duplicates = [c for c in final_coins if c in existing_coins]
                             if duplicates:
                                 raise Exception(get_text("duplicate_msg", ", ".join(duplicates)))
 
-                        # 데이터 저장
                         new_rows = []
                         now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
+                        # [핵심] 한/영 모든 정보 가져오기
+                        # selected_row는 위에서 이미 찾았으므로 거기서 값 추출
+                        val_top_ko = selected_row['Top_KO']
+                        val_bot_ko = selected_row['Bottom_KO']
+                        val_top_en = selected_row['Top_EN']
+                        val_bot_en = selected_row['Bottom_EN']
+
                         for c_no in final_coins:
                             new_rows.append({
                                 "Timestamp": now_ts,
@@ -379,9 +374,11 @@ def main():
                                 "Manager_Name": st.session_state['user_name'],
                                 "Passport_No": final_passport,
                                 "Coin_No": c_no,
-                                "Main_Cat": selected_top,  
-                                "Sub_Cat": selected_bot,
-                                "Detail_Cat": "", 
+                                # 4개 컬럼 모두 저장
+                                "Top_KO": val_top_ko,
+                                "Bottom_KO": val_bot_ko,
+                                "Top_EN": val_top_en,
+                                "Bottom_EN": val_bot_en,
                                 "Note": note
                             })
                         
@@ -405,8 +402,19 @@ def main():
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']].copy()
                 
                 if not my_logs.empty:
-                    display_df = my_logs[['Timestamp', 'Manager_ID', 'Manager_Name', 'Passport_No', 'Coin_No', 'Main_Cat', 'Sub_Cat', 'Note']].copy()
+                    # 화면 표시 데이터 정제
+                    my_logs['Passport_No'] = my_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
+                    my_logs['Coin_No'] = my_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                    
+                    # 언어 설정에 따라 보여줄 컬럼 선택
+                    is_ko = (st.session_state['language'] == "KO")
+                    show_top = "Top_KO" if is_ko else "Top_EN"
+                    show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
+
+                    # 컬럼 선택 및 이름 변경
+                    display_df = my_logs[['Timestamp', 'Manager_ID', 'Manager_Name', 'Passport_No', 'Coin_No', show_top, show_bot, 'Note']].copy()
                     display_df.columns = LANG[st.session_state['language']]['table_cols']
+                    
                     st.dataframe(display_df, use_container_width=True, hide_index=True)
                 else:
                     st.info(get_text("no_data"))
@@ -418,27 +426,32 @@ def main():
             with tabs[2]:
                 st.subheader(get_text("tab3"))
                 col_s1, col_s2 = st.columns([3, 1])
-                search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=15)
+                search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=5)
                 do_search = col_s2.button(get_text("redeem_search_btn"), use_container_width=True)
 
                 if search_passport:
                     try:
                         all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
-                        
-                        input_key = str(search_passport).strip()
-                        search_candidates = [input_key]
-                        if not input_key.upper().startswith("HSE"):
-                            search_candidates.append("HSE" + input_key)
+                        clean_search_key = clean_numeric_str(search_passport, 5)
 
                         all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                        all_logs['Passport_Clean'] = all_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
+                        
                         valid_logs = all_logs[~all_logs['Coin_Clean'].str.contains(r'\*', regex=True)].copy()
-                        target_logs = valid_logs[valid_logs['Passport_No'].isin(search_candidates)].copy()
+                        target_logs = valid_logs[valid_logs['Passport_Clean'] == clean_search_key].copy()
                         
                         count = len(target_logs)
                         st.metric(label="Available Coins", value=f"{count} EA")
 
                         if count > 0:
-                            display_df = target_logs[['Coin_No', 'Timestamp', 'Sub_Cat', 'Manager_Name']]
+                            # 언어에 따른 하위분류(사유) 컬럼 선택
+                            is_ko = (st.session_state['language'] == "KO")
+                            show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
+
+                            target_logs['Coin_No'] = target_logs['Coin_Clean']
+                            # 여기서 DB 컬럼(Top_KO 등)을 뷰 전용 컬럼으로 매핑
+                            display_df = target_logs[['Coin_No', 'Timestamp', show_bot, 'Manager_Name']]
+                            
                             st.write(get_text("redeem_table_title"))
                             display_df.insert(0, "Select", False)
                             
@@ -448,10 +461,10 @@ def main():
                                     "Select": st.column_config.CheckboxColumn(get_text("col_select"), default=False),
                                     "Coin_No": get_text("col_coin_no"),
                                     "Timestamp": get_text("col_timestamp"),
-                                    "Sub_Cat": get_text("col_reason"),
+                                    show_bot: get_text("col_reason"), # 동적 컬럼 매핑
                                     "Manager_Name": get_text("col_manager")
                                 },
-                                disabled=["Coin_No", "Timestamp", "Sub_Cat", "Manager_Name"],
+                                disabled=["Coin_No", "Timestamp", show_bot, "Manager_Name"],
                                 hide_index=True,
                                 use_container_width=True
                             )
@@ -469,13 +482,14 @@ def main():
                                     try:
                                         refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                         refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                                        refresh_logs['Passport_Clean'] = refresh_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
 
                                         usage_records = []
                                         now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                         
                                         selected_clean = [clean_numeric_str(c, 4).replace("*","") for c in selected_coins]
                                         mask = (refresh_logs['Coin_Clean'].isin(selected_clean)) & \
-                                               (refresh_logs['Passport_No'].isin(search_candidates))
+                                               (refresh_logs['Passport_Clean'] == clean_search_key)
                                         
                                         rows_to_update = refresh_logs[mask].index
                                         
@@ -493,7 +507,7 @@ def main():
                                                     "Reason": redeem_reason
                                                 })
                                         
-                                        refresh_logs = refresh_logs.drop(columns=['Coin_Clean'], errors='ignore')
+                                        refresh_logs = refresh_logs.drop(columns=['Coin_Clean', 'Passport_Clean'], errors='ignore')
                                         update_data_with_retry(worksheet="Logs", data=refresh_logs)
                                         
                                         if usage_records:
