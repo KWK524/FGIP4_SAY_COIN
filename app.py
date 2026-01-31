@@ -162,76 +162,60 @@ def clean_numeric_str(val, width=0):
         clean_s = clean_s.zfill(width)
     return clean_s + ("*" if is_used else "")
 
-# --- [신규 기능] 월별 통계 자동 계산 및 업데이트 ---
+# --- [수정됨] 월별 통계 자동 계산 및 업데이트 ---
 def calculate_and_update_stats():
     try:
-        # 1. 모든 데이터 로드
         logs_df = read_data_with_retry("Logs", ttl=0)
         users_df = read_data_with_retry("Users", ttl=0)
         cats_df = read_data_with_retry("Categories", ttl=0)
         
         if logs_df.empty: return
 
-        # 2. Logs에 'Month' 컬럼 생성 (YYYY-MM)
-        # Timestamp 형식이 'YYYY-MM-DD HH:MM:SS'라고 가정
-        logs_df['Month'] = pd.to_datetime(logs_df['Timestamp']).dt.strftime('%Y-%m')
+        # [핵심 변경 1] 날짜 포맷 변경 (2026-01 -> 26년 01월)
+        # 이렇게 한글을 섞어야 구글 시트가 숫자로 오해하지 않습니다.
+        logs_df['Month'] = pd.to_datetime(logs_df['Timestamp']).dt.strftime('%y년 %m월')
         
         # -----------------------------------------------------
-        # [A] Users 시트 통계 업데이트 (관리자별 월별 지급 건수)
+        # [A] Users 시트 통계
         # -----------------------------------------------------
-        # Pivot Table: 행=Manager_ID, 열=Month, 값=개수
         user_stats = logs_df.pivot_table(index='Manager_ID', columns='Month', values='Coin_No', aggfunc='count', fill_value=0)
         
-        # Users 원본과 병합 (ID 기준)
-        # Users 시트의 기본 컬럼들만 남기기 (기존 통계 데이터가 있다면 제거하고 새로 씀)
-        # 기본 컬럼: ID, PW, Name, Role (4개) + 기타 등등. G열(7번째)부터 쓸거니까 앞 6개만 유지하거나, 
-        # 안전하게 ID 기준으로 Merge. 여기서는 ID, Name 같은 기본 정보 유지.
-        
-        # ID가 매칭키이므로 문자열 변환
         users_df['ID'] = users_df['ID'].apply(lambda x: clean_numeric_str(x))
         user_stats.index = user_stats.index.astype(str)
         
-        # 기존 Users 데이터의 기본 컬럼들 보존 (통계 컬럼 제외)
-        # 통계 컬럼은 '202'로 시작하는(연도) 컬럼이라고 가정하거나, G열 이후를 덮어쓰기 위해 로직 구성
-        # 간단하게: Users의 고정 컬럼(A~F라고 가정하거나, 명시된 컬럼) + 통계 컬럼
-        base_user_cols = ['ID', 'PW', 'Name', 'Role'] # 최소 필수 컬럼
-        # 실제 시트에 더 많은 컬럼(예: 소속 등)이 있을 수 있으니, 현재 있는 컬럼 중 날짜 형식이 아닌 것만 유지
+        # [핵심 변경 2] 통계 컬럼 찾는 패턴 변경 (26년 01월 패턴)
+        # 기존 Users 데이터에서 통계 컬럼을 제외한 기본 정보만 남김
         current_cols = users_df.columns.tolist()
-        keep_cols = [c for c in current_cols if not re.match(r'\d{4}-\d{2}', c)]
+        keep_cols = [c for c in current_cols if not re.match(r'\d{2}년 \d{2}월', c)]
         
         users_base = users_df[keep_cols].copy()
         
-        # Merge (Left Join)
         users_final = pd.merge(users_base, user_stats, left_on='ID', right_index=True, how='left')
-        users_final = users_final.fillna(0) # NaN -> 0
+        users_final = users_final.fillna(0)
         
-        # 숫자 컬럼들(통계)은 정수로 변환
+        # 숫자 컬럼들(통계) 정수 변환
         for col in users_final.columns:
-            if re.match(r'\d{4}-\d{2}', col):
+            if re.match(r'\d{2}년 \d{2}월', col):
                 users_final[col] = users_final[col].astype(int)
                 
-        # Users 시트 업데이트
         update_data_with_retry("Users", users_final)
         
         # -----------------------------------------------------
-        # [B] Categories 시트 통계 업데이트 (사유별 월별 지급 건수)
+        # [B] Categories 시트 통계
         # -----------------------------------------------------
-        # Pivot Table: 행=[Top_KO, Bottom_KO], 열=Month, 값=개수
         cat_stats = logs_df.pivot_table(index=['Top_KO', 'Bottom_KO'], columns='Month', values='Coin_No', aggfunc='count', fill_value=0)
         
         # Categories 원본 정리
-        keep_cat_cols = [c for c in cats_df.columns.tolist() if not re.match(r'\d{4}-\d{2}', c)]
+        keep_cat_cols = [c for c in cats_df.columns.tolist() if not re.match(r'\d{2}년 \d{2}월', c)]
         cats_base = cats_df[keep_cat_cols].copy()
         
-        # Merge (Left Join) - 키 2개 사용
         cats_final = pd.merge(cats_base, cat_stats, on=['Top_KO', 'Bottom_KO'], how='left')
         cats_final = cats_final.fillna(0)
         
         for col in cats_final.columns:
-            if re.match(r'\d{4}-\d{2}', col):
+            if re.match(r'\d{2}년 \d{2}월', col):
                 cats_final[col] = cats_final[col].astype(int)
                 
-        # Categories 시트 업데이트
         update_data_with_retry("Categories", cats_final)
         
     except Exception as e:
@@ -456,7 +440,7 @@ def main():
                         updated_data = pd.concat([existing_data, new_df], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
                         
-                        # [추가] 통계 업데이트 실행
+                        # 통계 업데이트
                         calculate_and_update_stats()
                         
                         show_result_popup(True, clear_on_ok=True)
