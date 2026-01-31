@@ -147,6 +147,31 @@ def get_text(key, *args):
         return text.format(*args)
     return text
 
+# --- [핵심] 강력한 데이터 정제 함수 (1.0 -> 0001 복원) ---
+def sanitize_code(value, length=4):
+    """
+    1.0 -> 1 -> 0001 로 변환
+    1234* -> 1234* (유지)
+    nan -> ""
+    """
+    s = str(value).strip()
+    if s.lower() == "nan" or s.lower() == "none" or s == "":
+        return ""
+    
+    # 1.0 같은 실수형 문자열 처리
+    if s.endswith(".0"):
+        s = s[:-2]
+        
+    # 별표(*)가 있으면 분리해서 숫자 부분만 패딩
+    has_star = "*" in s
+    clean_s = s.replace("*", "")
+    
+    # 숫자만 있다면 지정된 길이만큼 0 채우기 (패스포트5, 코인4)
+    if clean_s.isdigit():
+        clean_s = clean_s.zfill(length)
+        
+    return clean_s + ("*" if has_star else "")
+
 # --- 재시도 로직 함수 ---
 def read_data_with_retry(worksheet, ttl=0, max_retries=5):
     retries = 0
@@ -187,9 +212,9 @@ def load_users_data():
 def login(username, password):
     try:
         users_df = load_users_data()
-        
-        users_df['ID'] = users_df['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-        users_df['PW'] = users_df['PW'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        # 데이터 정제 적용
+        users_df['ID'] = users_df['ID'].apply(lambda x: sanitize_code(x, 0)) # ID는 패딩 안함
+        users_df['PW'] = users_df['PW'].apply(lambda x: sanitize_code(x, 0))
         
         if 'Role' not in users_df.columns:
             users_df['Role'] = ""
@@ -205,12 +230,10 @@ def login(username, password):
         st.error(f"Login Error: {e}")
         return None, None
 
-# --- 입력 필드 & 드롭다운 초기화 함수 ---
 def clear_inputs():
     st.session_state['k_passport'] = ""
     st.session_state['k_coin'] = ""
     st.session_state['k_note'] = ""
-    
     default_val = get_text("select_default")
     st.session_state['k_main'] = default_val
     st.session_state['k_sub'] = default_val
@@ -312,12 +335,16 @@ def main():
                     selected_main == default_opt or selected_sub == default_opt):
                     st.warning(get_text("warning_fill"))
                 else:
+                    # [핵심] 저장할 때 ' (아포스트로피)를 붙여서 텍스트로 강제 인식시킴
+                    safe_passport = f"'{passport_no.zfill(5)}"
+                    safe_coin = f"'{coin_no.zfill(4)}"
+                    
                     new_data = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Manager_ID": st.session_state['user_id'],
                         "Manager_Name": st.session_state['user_name'],
-                        "Passport_No": passport_no,
-                        "Coin_No": coin_no,
+                        "Passport_No": safe_passport,
+                        "Coin_No": safe_coin,
                         "Main_Cat": selected_main,
                         "Sub_Cat": selected_sub,
                         "Detail_Cat": selected_detail,
@@ -328,8 +355,10 @@ def main():
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
                         if not existing_data.empty:
-                            check_series = existing_data['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                            input_coin = str(coin_no).strip()
+                            # 읽어온 데이터 정제 후 비교
+                            check_series = existing_data['Coin_No'].apply(lambda x: sanitize_code(x, 4))
+                            input_coin = coin_no.zfill(4) # 입력값도 4자리로 맞춰서 비교
+                            
                             if input_coin in check_series.values:
                                 raise Exception(get_text("duplicate_msg"))
 
@@ -348,6 +377,11 @@ def main():
                 
             try:
                 all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                
+                # 데이터 정제 (보여주기용)
+                all_logs['Passport_No'] = all_logs['Passport_No'].apply(lambda x: sanitize_code(x, 5))
+                all_logs['Coin_No'] = all_logs['Coin_No'].apply(lambda x: sanitize_code(x, 4))
+                
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']]
                 
                 if not my_logs.empty:
@@ -371,9 +405,11 @@ def main():
                     try:
                         all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                         
-                        all_logs['Passport_No'] = all_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                        all_logs['Coin_No'] = all_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                        clean_search_key = str(search_passport).strip()
+                        # [핵심] 읽어온 데이터 싹 정제 (1.0 -> 0001)
+                        all_logs['Passport_No'] = all_logs['Passport_No'].apply(lambda x: sanitize_code(x, 5))
+                        all_logs['Coin_No'] = all_logs['Coin_No'].apply(lambda x: sanitize_code(x, 4))
+                        
+                        clean_search_key = search_passport.strip().zfill(5)
                         
                         target_logs = all_logs[
                             (all_logs['Passport_No'] == clean_search_key) & 
@@ -416,8 +452,10 @@ def main():
                                     try:
                                         # 1. Logs 시트 업데이트
                                         refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
-                                        refresh_logs['Passport_No'] = refresh_logs['Passport_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                                        refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                                        
+                                        # 매칭을 위해 다시 정제
+                                        refresh_logs['Passport_No'] = refresh_logs['Passport_No'].apply(lambda x: sanitize_code(x, 5))
+                                        refresh_logs['Coin_No'] = refresh_logs['Coin_No'].apply(lambda x: sanitize_code(x, 4))
 
                                         usage_records = []
                                         now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -430,15 +468,15 @@ def main():
                                             
                                             if not idx.empty:
                                                 target_idx = idx[0]
-                                                refresh_logs.at[target_idx, 'Coin_No'] = f"{c_no}*"
+                                                # 별표 붙일 때 아포스트로피 붙여서 저장
+                                                refresh_logs.at[target_idx, 'Coin_No'] = f"'{c_no}*"
                                                 
-                                                # Usage 데이터 준비
                                                 usage_records.append({
                                                     "Timestamp": now_ts,
                                                     "Manager_ID": st.session_state['user_id'],
                                                     "Manager_Name": st.session_state['user_name'],
-                                                    "Passport_No": str(clean_search_key),
-                                                    "Coin_No": str(c_no),
+                                                    "Passport_No": f"'{clean_search_key}", # 아포스트로피 추가
+                                                    "Coin_No": f"'{c_no}",                 # 아포스트로피 추가
                                                     "Reason": redeem_reason
                                                 })
 
@@ -448,15 +486,8 @@ def main():
                                         # 3. Usage 시트 저장
                                         if usage_records:
                                             new_usage_df = pd.DataFrame(usage_records)
-                                            # 데이터 타입을 문자열로 고정 (0007 보존)
-                                            new_usage_df['Coin_No'] = new_usage_df['Coin_No'].astype(str)
-                                            new_usage_df['Passport_No'] = new_usage_df['Passport_No'].astype(str)
-
                                             try:
                                                 existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
-                                                if not existing_usage.empty:
-                                                    existing_usage['Coin_No'] = existing_usage['Coin_No'].astype(str)
-                                                    existing_usage['Passport_No'] = existing_usage['Passport_No'].astype(str)
                                                 updated_usage = pd.concat([existing_usage, new_usage_df], ignore_index=True)
                                             except Exception:
                                                 updated_usage = new_usage_df
