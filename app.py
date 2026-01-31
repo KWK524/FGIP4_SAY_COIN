@@ -6,7 +6,7 @@ from streamlit_gsheets import GSheetsConnection
 # --- 설정: 페이지 기본 세팅 ---
 st.set_page_config(page_title="S.A.Y COIN System", page_icon="🪙")
 
-# --- 다국어 텍스트 사전 (Language Dictionary) ---
+# --- 다국어 텍스트 사전 ---
 LANG = {
     "KO": {
         "title": "FGIP4 S.A.Y COIN",
@@ -14,11 +14,12 @@ LANG = {
         "id_label": "아이디",
         "pw_label": "비밀번호",
         "login_btn": "로그인",
-        "login_fail": "아이디 또는 비밀번호가 잘못되었습니다.",
+        "login_fail": "아이디/비번 확인 또는 권한 문의 필요.",
         "logout_btn": "로그아웃",
-        "welcome": "접속자: {} 님",
+        "welcome": "접속자: {} 님 ({})",
         "tab1": "💰 코인 지급",
         "tab2": "📋 지급 기록",
+        "tab3": "🏪 코인 사용(상품교환)",
         "header_reward": "근로자 안전 행동 보상",
         "passport_label": "Passport No (5자리)",
         "coin_label": "Coin Serial (0001~3000)",
@@ -29,13 +30,21 @@ LANG = {
         "note_label": "비고 (선택사항)",
         "submit_btn": "지급 등록",
         "warning_fill": "모든 필수 항목(번호, 분류)을 선택해주세요.",
-        "success_msg": "저장되었습니다!",
-        "fail_msg": "저장에 실패했습니다.",
-        "home_btn": "OK",
+        "success_msg": "처리되었습니다!",
+        "fail_msg": "처리에 실패했습니다.",
+        "ok_btn": "OK",
         "retry_btn": "재시도",
         "refresh_btn": "내역 새로고침",
-        "no_data": "아직 지급한 기록이 없습니다.",
+        "no_data": "데이터가 없습니다.",
         "header_history": "나의 지급 내역",
+        # 코인 사용 탭 관련
+        "redeem_search_label": "근로자 조회 (Passport No)",
+        "redeem_search_btn": "조회",
+        "redeem_info": "보유 코인: {} 개",
+        "redeem_reason_label": "사용 사유 (예: 커피 교환)",
+        "redeem_btn": "선택한 코인 사용 처리",
+        "redeem_warning": "사용할 코인을 선택해주세요.",
+        "redeem_reason_warning": "사용 사유를 입력해주세요.",
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "대분류", "중분류", "소분류", "비고"]
     },
     "EN": {
@@ -44,11 +53,12 @@ LANG = {
         "id_label": "ID",
         "pw_label": "Password",
         "login_btn": "Login",
-        "login_fail": "Invalid ID or Password.",
+        "login_fail": "Check ID/PW or Permission.",
         "logout_btn": "Logout",
-        "welcome": "User: {}",
+        "welcome": "User: {} ({})",
         "tab1": "💰 Reward Coin",
         "tab2": "📋 History",
+        "tab3": "🏪 Redeem Coin",
         "header_reward": "Safety Action Reward",
         "passport_label": "Passport No (5 digits)",
         "coin_label": "Coin Serial (0001~3000)",
@@ -59,117 +69,135 @@ LANG = {
         "note_label": "Note (Optional)",
         "submit_btn": "Submit",
         "warning_fill": "Please fill in all required fields.",
-        "success_msg": "Saved Successfully!",
-        "fail_msg": "Save Failed.",
-        "home_btn": "OK",
+        "success_msg": "Success!",
+        "fail_msg": "Failed.",
+        "ok_btn": "OK",
         "retry_btn": "Retry",
         "refresh_btn": "Refresh",
-        "no_data": "No records found.",
+        "no_data": "No data found.",
         "header_history": "My History",
+        "redeem_search_label": "Search Worker (Passport No)",
+        "redeem_search_btn": "Search",
+        "redeem_info": "Owned Coins: {}",
+        "redeem_reason_label": "Redeem Reason",
+        "redeem_btn": "Redeem Selected Coins",
+        "redeem_warning": "Select coins to redeem.",
+        "redeem_reason_warning": "Please enter a reason.",
         "table_cols": ["Time", "ManagerID", "Name", "Passport", "CoinNo", "Main", "Sub", "Detail", "Note"]
     }
 }
 
-# --- 안전 데이터 (KO/EN) ---
-# 구조: 대분류 -> 중분류 -> 소분류 리스트
 SAFETY_DATA = {
     "KO": {
-        "개인 보호구 (PPE)": {
+        "개인 보호구": {
             "안전모": ["턱끈 체결 철저", "올바른 착용 상태", "파손품 자진 교체 요청"],
             "안전벨트": ["고소작업 시 체결 철저", "이중 안전고리 사용", "올바른 착용"],
             "안전화": ["뒤꿈치 꺾어 신지 않음", "끈 조임 상태 양호"],
             "보안경/마스크": ["분진 발생 작업 시 착용", "용접 보안면 착용"]
         },
-        "안전 행동 (Behavior)": {
+        "안전 행동": {
             "정리정돈": ["작업장 통로 확보", "자재 적재 상태 양호", "작업 후 청소 상태 우수"],
             "TBM/교육": ["TBM 적극적 참여", "동료에게 위험 전파", "스트레칭 우수"],
             "장비 유도": ["신호수 위치 준수", "장비 반경 내 접근 금지 준수"]
         },
-        "위험 발굴 (Risk)": {
+        "위험 발굴": {
             "아차사고": ["아차사고 신고 및 공유", "불안전한 상태 개선 건의"],
             "작업 중지": ["위험 상황 인지 후 작업 중지권 행사"]
         }
     },
     "EN": {
-        "Personal Protective Equipment (PPE)": {
-            "Safety Helmet": ["Chin strap secured", "Properly worn", "Request replacement for damage"],
-            "Safety Harness": ["Hook secured at height", "Double lanyard usage", "Properly worn"],
-            "Safety Shoes": ["Heels not folded", "Laces tied properly"],
-            "Goggles/Mask": ["Worn during dusty work", "Welding shield used"]
+        "PPE": {
+            "Helmet": ["Chin strap secured", "Properly worn"],
+            "Harness": ["Hook secured", "Double lanyard usage"],
+            "Shoes": ["Heels not folded", "Laces tied"]
         },
         "Safe Behavior": {
-            "Housekeeping": ["Walkways clear", "Material stacking safe", "Clean after work"],
-            "TBM/Training": ["Active participation in TBM", "Warning others of risks", "Excellent stretching"],
-            "Equipment Signaling": ["Signaler position maintained", "Stayed out of radius"]
+            "Housekeeping": ["Walkways clear", "Material stacking safe"],
+            "TBM": ["Active participation", "Warning others"]
         },
-        "Risk Identification": {
-            "Near Miss": ["Reported near miss", "Suggested safety improvement"],
-            "Stop Work": ["Exercised Stop Work Authority"]
+        "Risk ID": {
+            "Near Miss": ["Reported near miss"],
+            "Stop Work": ["Stop Work Authority"]
         }
     }
 }
 
-# --- 데이터베이스 연결 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 헬퍼 함수 ---
 def get_text(key):
-    """현재 언어 설정에 맞는 텍스트 반환"""
     lang_code = st.session_state.get('language', 'KO')
     return LANG[lang_code][key]
 
+# --- 로그인 함수 (Role 추가) ---
 def login(username, password):
     try:
         users_df = conn.read(worksheet="Users", ttl=0)
-        # 숫자/문자 호환 처리
         users_df['ID'] = users_df['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         users_df['PW'] = users_df['PW'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-        username = str(username).strip()
-        password = str(password).strip()
+        
+        # Role 컬럼이 없으면 빈 문자열로 처리
+        if 'Role' not in users_df.columns:
+            users_df['Role'] = ""
+        else:
+            users_df['Role'] = users_df['Role'].fillna("").astype(str)
 
-        user = users_df[(users_df['ID'] == username) & (users_df['PW'] == password)]
+        user = users_df[(users_df['ID'] == str(username).strip()) & (users_df['PW'] == str(password).strip())]
+        
         if not user.empty:
-            return user.iloc[0]['Name']
-        return None
-    except Exception:
-        return None
+            return user.iloc[0]['Name'], user.iloc[0]['Role']
+        return None, None
+    except Exception as e:
+        print(e)
+        return None, None
 
-# --- 팝업(Dialog) 함수 (Streamlit 1.34+ 권장) ---
-@st.dialog("Result")
-def show_result_popup(is_success, error_msg=None):
+# --- 입력 필드 초기화 함수 ---
+def clear_inputs():
+    # Session State의 키값을 초기화
+    st.session_state['k_passport'] = ""
+    st.session_state['k_coin'] = ""
+    st.session_state['k_note'] = ""
+    # 드롭다운 초기화를 위해 index 변경 등의 로직이 필요할 수 있으나,
+    # 여기서는 input box 위주로 초기화. 드롭다운은 기본값으로 돌아감.
+
+# --- 팝업(Dialog) 함수 ---
+@st.dialog("알림")
+def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
     if is_success:
         st.success(get_text("success_msg"))
-        if st.button(get_text("home_btn"), key="popup_home"):
+        # OK 버튼 누르면 입력창 비우고 닫기
+        if st.button(get_text("ok_btn")):
+            if clear_on_ok:
+                clear_inputs()
             st.rerun()
     else:
         st.error(f"{get_text('fail_msg')}\n({error_msg})")
-        if st.button(get_text("retry_btn"), key="popup_retry"):
+        if st.button(get_text("retry_btn")):
             st.rerun()
 
-# --- 메인 로직 ---
 def main():
-    # 1. 세션 초기화
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
+        st.session_state['user_role'] = ""
+
     if 'language' not in st.session_state:
         st.session_state['language'] = "KO"
 
-    # 2. 사이드바 (언어 설정 및 정보)
     with st.sidebar:
         st.header("Settings")
-        # 언어 전환 토글
         lang_choice = st.radio("Language", ["Korean", "English"], 
                                index=0 if st.session_state['language'] == "KO" else 1)
         st.session_state['language'] = "KO" if lang_choice == "Korean" else "EN"
         
         if st.session_state['logged_in']:
             st.divider()
-            st.info(get_text("welcome").format(st.session_state['user_name']))
+            role_display = "Admin" if st.session_state['user_role'] == "Master" else "User"
+            st.info(get_text("welcome").format(st.session_state['user_name'], role_display))
             if st.button(get_text("logout_btn")):
                 st.session_state['logged_in'] = False
+                st.session_state['user_role'] = ""
                 st.rerun()
 
-    # 3. 로그인 화면
+    # --- 로그인 화면 ---
     if not st.session_state['logged_in']:
         st.title(get_text("login_title"))
         with st.form("login_form"):
@@ -178,73 +206,61 @@ def main():
             submit = st.form_submit_button(get_text("login_btn"))
             
             if submit:
-                user_name = login(username, password)
+                user_name, user_role = login(username, password)
                 if user_name:
                     st.session_state['logged_in'] = True
                     st.session_state['user_name'] = user_name
                     st.session_state['user_id'] = username
+                    st.session_state['user_role'] = user_role
                     st.rerun()
                 else:
                     st.error(get_text("login_fail"))
 
-    # 4. 메인 앱 화면
+    # --- 메인 앱 화면 ---
     else:
         st.title(get_text("title"))
-        tab1, tab2 = st.tabs([get_text("tab1"), get_text("tab2")])
-
-        # --- TAB 1: 코인 지급 ---
-        with tab1:
-            st.subheader(get_text("header_reward"))
+        
+        # 탭 구성: 권한에 따라 다르게 표시
+        tabs_list = [get_text("tab1"), get_text("tab2")]
+        if st.session_state['user_role'] == "Master":
+            tabs_list.append(get_text("tab3"))
             
-            # 드롭다운 데이터 로드 (언어에 맞게)
+        tabs = st.tabs(tabs_list)
+
+        # ---------------------------------------------------------
+        # [TAB 1] 코인 지급
+        # ---------------------------------------------------------
+        with tabs[0]:
+            st.subheader(get_text("header_reward"))
             current_data = SAFETY_DATA[st.session_state['language']]
             default_opt = get_text("select_default")
 
-            # Form 시작
-            # 주의: Streamlit Form 안에서는 동적 상호작용(값 변경 시 리로드)이 제한적임.
-            # 따라서 3단 드롭다운의 실시간 갱신을 위해 Form을 쓰지 않거나, 
-            # selectbox를 form 밖에 두고 마지막 제출만 버튼으로 처리하는 방식을 씀.
-            # 여기서는 UX를 위해 Form 없이 구성하고 마지막에 버튼으로 처리함.
-
+            # Session State key를 사용하여 값 초기화 제어
             col1, col2 = st.columns(2)
-            passport_no = col1.text_input(get_text("passport_label"), max_chars=5)
-            coin_no = col2.text_input(get_text("coin_label"), max_chars=4)
+            passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
+            coin_no = col2.text_input(get_text("coin_label"), max_chars=4, key="k_coin")
 
-            # [1] 대분류
+            # 3단 드롭다운 (초기화 편의를 위해 간단하게 구성)
             main_cats = [default_opt] + list(current_data.keys())
             selected_main = st.selectbox(get_text("cat_main"), main_cats)
 
-            # [2] 중분류 (대분류 선택 시 활성화)
             sub_cats = [default_opt]
-            is_sub_disabled = True
             if selected_main != default_opt:
-                is_sub_disabled = False
                 sub_cats += list(current_data[selected_main].keys())
-            
-            selected_sub = st.selectbox(get_text("cat_sub"), sub_cats, disabled=is_sub_disabled)
+            selected_sub = st.selectbox(get_text("cat_sub"), sub_cats, disabled=(selected_main == default_opt))
 
-            # [3] 소분류 (중분류 선택 시 활성화)
             detail_cats = [default_opt]
-            is_detail_disabled = True
-            if selected_sub != default_opt:
-                is_detail_disabled = False
+            if selected_sub != default_opt and selected_main != default_opt:
                 detail_cats += current_data[selected_main][selected_sub]
+            selected_detail = st.selectbox(get_text("cat_detail"), detail_cats, disabled=(selected_sub == default_opt))
 
-            selected_detail = st.selectbox(get_text("cat_detail"), detail_cats, disabled=is_detail_disabled)
+            note = st.text_area(get_text("note_label"), height=80, key="k_note")
 
-            # 비고
-            note = st.text_area(get_text("note_label"), height=80)
-
-            # 제출 버튼
             if st.button(get_text("submit_btn"), type="primary", use_container_width=True):
-                # 유효성 검사
                 if (not passport_no or not coin_no or 
-                    selected_main == default_opt or 
-                    selected_sub == default_opt or 
-                    selected_detail == default_opt):
+                    selected_main == default_opt or selected_sub == default_opt):
                     st.warning(get_text("warning_fill"))
                 else:
-                    # 저장 로직
                     new_data = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Manager_ID": st.session_state['user_id'],
@@ -261,36 +277,130 @@ def main():
                         existing_data = conn.read(worksheet="Logs", ttl=0)
                         updated_data = pd.concat([existing_data, new_data], ignore_index=True)
                         conn.update(worksheet="Logs", data=updated_data)
-                        
-                        # 성공 팝업
-                        show_result_popup(True)
-                        
+                        show_result_popup(True, clear_on_ok=True) # 성공 시 입력창 초기화 트리거
                     except Exception as e:
-                        # 실패 팝업
                         show_result_popup(False, str(e))
 
-        # --- TAB 2: 지급 기록 ---
-        with tab2:
+        # ---------------------------------------------------------
+        # [TAB 2] 지급 기록
+        # ---------------------------------------------------------
+        with tabs[1]:
             st.subheader(get_text("header_history"))
-            if st.button(get_text("refresh_btn")):
+            if st.button(get_text("refresh_btn"), key="hist_refresh"):
                 st.rerun()
                 
             try:
                 all_logs = conn.read(worksheet="Logs", ttl=0)
+                # Manager_ID 기준으로 필터
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']]
                 
                 if not my_logs.empty:
                     my_logs = my_logs.sort_values(by="Timestamp", ascending=False)
-                    # 테이블 컬럼명 번역 적용 (보여주기용)
-                    display_df = my_logs.copy()
-                    # (주의: 실제 컬럼 갯수와 table_cols 갯수가 맞지 않으면 에러날 수 있으니 단순 표시)
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    st.dataframe(my_logs, use_container_width=True, hide_index=True)
                 else:
                     st.info(get_text("no_data"))
             except Exception:
                 st.error(get_text("fail_msg"))
 
+        # ---------------------------------------------------------
+        # [TAB 3] 코인 사용 (Master Only)
+        # ---------------------------------------------------------
+        if st.session_state['user_role'] == "Master":
+            with tabs[2]:
+                st.subheader(get_text("tab3"))
+                
+                # 1. 근로자 조회
+                col_s1, col_s2 = st.columns([3, 1])
+                search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=5)
+                do_search = col_s2.button(get_text("redeem_search_btn"), use_container_width=True)
+
+                # 검색 실행 및 결과 표시
+                if search_passport:
+                    try:
+                        all_logs = conn.read(worksheet="Logs", ttl=0)
+                        
+                        # 중요: 코인번호를 문자열로 변환하고, '*'가 포함되지 않은(사용 안 된) 코인만 필터링
+                        all_logs['Coin_No'] = all_logs['Coin_No'].astype(str)
+                        
+                        target_logs = all_logs[
+                            (all_logs['Passport_No'].astype(str) == search_passport) & 
+                            (~all_logs['Coin_No'].str.contains(r'\*', regex=True))
+                        ].copy()
+
+                        # 보유량 표시
+                        count = len(target_logs)
+                        st.metric(label="Available Coins", value=f"{count} EA")
+
+                        if count > 0:
+                            # 2. 체크박스 목록 표시 (Coin_No가 맨 앞으로)
+                            # 표시할 컬럼 정리
+                            display_df = target_logs[['Coin_No', 'Timestamp', 'Detail_Cat', 'Manager_Name']]
+                            
+                            st.write("▼ 코인 선택 (체크박스)")
+                            # Data Editor로 체크박스 구현
+                            # 사용자가 선택할 수 있도록 'Select' 컬럼 추가 (기본값 False)
+                            display_df.insert(0, "Select", False)
+                            
+                            edited_df = st.data_editor(
+                                display_df,
+                                column_config={
+                                    "Select": st.column_config.CheckboxColumn("선택", default=False),
+                                    "Coin_No": "코인 번호",
+                                    "Timestamp": "지급 일시",
+                                    "Detail_Cat": "사유",
+                                    "Manager_Name": "지급자"
+                                },
+                                disabled=["Coin_No", "Timestamp", "Detail_Cat", "Manager_Name"],
+                                hide_index=True,
+                                use_container_width=True
+                            )
+
+                            # 3. 사용 처리 (사유 입력)
+                            redeem_reason = st.text_input(get_text("redeem_reason_label"))
+                            
+                            if st.button(get_text("redeem_btn"), type="primary"):
+                                # 선택된 행 찾기
+                                selected_coins = edited_df[edited_df["Select"] == True]["Coin_No"].tolist()
+                                
+                                if not selected_coins:
+                                    st.warning(get_text("redeem_warning"))
+                                elif not redeem_reason:
+                                    st.warning(get_text("redeem_reason_warning"))
+                                else:
+                                    # DB 업데이트 로직
+                                    # 원본 all_logs에서 해당 Coin_No를 찾아서 * 붙이기
+                                    # 주의: 동명이인 등 방지를 위해 Passport와 Coin_No 둘 다 매칭 권장하지만, Coin_No 유니크 가정시 Coin_No로 처리
+                                    try:
+                                        # 전체 로그 다시 불러와서 업데이트 (동시성 안전)
+                                        refresh_logs = conn.read(worksheet="Logs", ttl=0)
+                                        refresh_logs['Coin_No'] = refresh_logs['Coin_No'].astype(str)
+
+                                        for c_no in selected_coins:
+                                            # 해당 코인을 찾아서
+                                            idx = refresh_logs[
+                                                (refresh_logs['Coin_No'] == c_no) & 
+                                                (refresh_logs['Passport_No'].astype(str) == search_passport)
+                                            ].index
+                                            
+                                            if not idx.empty:
+                                                # * 추가 (사용 처리)
+                                                # 비고란에 사용 내역도 추가해주면 좋음 (선택사항)
+                                                refresh_logs.at[idx[0], 'Coin_No'] = f"{c_no}*"
+                                                current_note = str(refresh_logs.at[idx[0], 'Note'])
+                                                refresh_logs.at[idx[0], 'Note'] = f"{current_note} [Used: {redeem_reason}]"
+
+                                        conn.update(worksheet="Logs", data=refresh_logs)
+                                        st.success(f"{len(selected_coins)}개 코인 사용 처리 완료!")
+                                        st.rerun()
+
+                                    except Exception as e:
+                                        st.error(f"업데이트 실패: {e}")
+
+                        else:
+                            st.info("사용 가능한 코인이 없습니다.")
+
+                    except Exception as e:
+                        st.error(f"조회 중 오류 발생: {e}")
+
 if __name__ == "__main__":
     main()
-
-
