@@ -344,8 +344,12 @@ def main():
             
             # [수정된 로그아웃 로직]
             if st.button(get_text("logout_btn")):
-                # 1. 쿠키 삭제 명령
-                cookie_manager.delete("fgip4_auth")
+                # 1. 쿠키 삭제 시도 (에러 무시 처리 추가)
+                try:
+                    cookie_manager.delete("fgip4_auth")
+                except KeyError:
+                    # 쿠키가 이미 없으면 에러가 나는데, 그냥 무시하고 넘어가면 됩니다.
+                    pass
                 
                 # 2. 세션 상태 초기화
                 st.session_state['logged_in'] = False
@@ -353,8 +357,8 @@ def main():
                 st.session_state['user_name'] = ""
                 st.session_state['user_id'] = ""
                 
-                # 3. [중요] 브라우저가 쿠키를 지울 시간을 줌 (1초 대기)
-                st.toast("로그아웃 중입니다...", icon="👋")
+                # 3. 브라우저가 처리를 완료할 시간을 줌
+                st.toast("로그아웃 되었습니다.", icon="👋")
                 time.sleep(1) 
                 
                 # 4. 새로고침
@@ -830,6 +834,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
