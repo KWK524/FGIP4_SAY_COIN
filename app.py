@@ -293,7 +293,7 @@ def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
 # --- [중요] 쿠키 매니저 초기화 함수 ---
 # 캐싱 데코레이터 삭제함
 def get_manager():
-    return stx.CookieManager()
+    return stx.CookieManager(key="auth_cookie_manager")
 
 def main():
     # 1. 쿠키 매니저 로드
@@ -370,10 +370,12 @@ def main():
                     st.session_state['user_role'] = user_role
                     
                     # [로그인 성공 시] 쿠키 저장 (유효기간 7일)
-                    # 보안 참고: 실제 서비스에서는 비밀번호를 그대로 저장하면 안 되지만, 
-                    # 현재 구조상(스프레드시트 평문 저장) 편의를 위해 "ID:PW" 형태로 저장합니다.
                     cookie_val = f"{username}:{password}"
                     cookie_manager.set("fgip4_auth", cookie_val, expires_at=datetime.now() + timedelta(days=7))
+                    
+                    # [중요 수정] 브라우저가 쿠키를 저장할 시간을 줍니다 (1초 대기)
+                    st.toast("로그인 성공! 잠시 후 이동합니다...", icon="✅")
+                    time.sleep(1) 
                     
                     st.rerun()
                 else:
@@ -820,6 +822,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
