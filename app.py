@@ -8,7 +8,7 @@ from streamlit_gsheets import GSheetsConnection
 # --- 설정: 페이지 기본 세팅 ---
 st.set_page_config(page_title="FGIP4 S.A.Y COIN", page_icon="🪙")
 
-# --- 다국어 텍스트 사전 ---
+# --- 다국어 텍스트 사전 (기존과 동일) ---
 LANG = {
     "KO": {
         "title": "FGIP4 S.A.Y COIN",
@@ -22,7 +22,7 @@ LANG = {
         "tab1": "💰 코인 지급",
         "tab2": "📋 지급 기록",
         "tab3": "🏪 코인 사용(상품교환)",
-        "tab4": "🤝 협력사 관리",  # [추가]
+        "tab4": "🤝 협력사 관리",
         "header_reward": "근로자 안전 행동 보상",
         "passport_label": "HSE Passport No", 
         "passport_check_label": "HSE Passport No (Confirm)",
@@ -45,17 +45,17 @@ LANG = {
         "no_data": "데이터가 없습니다.",
         "header_history": "나의 지급 내역",
         "redeem_search_label": "근로자 조회 (HSE Passport No)",
-        "redeem_coin_search_label": "코인 조회 (일련번호 4자리)", # [추가]
-        "redeem_search_mode": "검색 방식 선택", # [추가]
-        "mode_worker": "근로자 검색 (보유 코인 목록)", # [추가]
-        "mode_coin": "코인 번호 검색 (단건 조회)", # [추가]
-        "coin_owner_info": "🔍 소유자 정보: Passport No **{}**", # [추가]
-        "coin_not_found": "⚠️ 해당 코인을 찾을 수 없거나 이미 사용되었습니다.", # [추가]
+        "redeem_coin_search_label": "코인 조회 (일련번호 4자리)",
+        "redeem_search_mode": "검색 방식 선택",
+        "mode_worker": "근로자 검색 (보유 코인 목록)",
+        "mode_coin": "코인 번호 검색 (단건 조회)",
+        "coin_owner_info": "🔍 소유자 정보: Passport No **{}**",
+        "coin_not_found": "⚠️ 해당 코인을 찾을 수 없거나 이미 사용되었습니다.",
         "redeem_search_btn": "조회",
         "redeem_info": "보유 코인: {} 개",
         "redeem_reason_label": "사용 사유",
         "redeem_btn": "선택한 코인 사용 처리",
-        "redeem_single_btn": "해당 코인 사용 처리", # [추가]
+        "redeem_single_btn": "해당 코인 사용 처리",
         "redeem_warning": "사용할 코인을 선택해주세요.",
         "redeem_reason_warning": "사용 사유를 입력해주세요.",
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "상위분류", "하위분류", "비고"],
@@ -66,7 +66,6 @@ LANG = {
         "col_reason": "사유",
         "col_manager": "지급자",
         "api_wait": "통신량이 많아 대기 중... ({}/{})",
-        # --- 협력사 탭 관련 ---
         "subcon_select_label": "협력사(Subcontractor) 선택",
         "subcon_balance_fmt": "💰 현재 보유 수량: **{}** 개",
         "subcon_action_type": "작업 유형",
@@ -94,7 +93,7 @@ LANG = {
         "tab1": "💰 Reward Coin",
         "tab2": "📋 History",
         "tab3": "🏪 Redeem Coin",
-        "tab4": "🤝 Subcontractor", # [Added]
+        "tab4": "🤝 Subcontractor",
         "header_reward": "Safety Action Reward",
         "passport_label": "HSE Passport No",
         "passport_check_label": "HSE Passport No (Confirm)",
@@ -117,17 +116,17 @@ LANG = {
         "no_data": "No data found.",
         "header_history": "My History",
         "redeem_search_label": "Search Worker (HSE Passport No)",
-        "redeem_coin_search_label": "Search Coin (4-digit Serial)", # [Added]
-        "redeem_search_mode": "Search Mode", # [Added]
-        "mode_worker": "By Worker (List Coins)", # [Added]
-        "mode_coin": "By Coin No (Single)", # [Added]
-        "coin_owner_info": "🔍 Owner: Passport No **{}**", # [Added]
-        "coin_not_found": "⚠️ Coin not found or already used.", # [Added]
+        "redeem_coin_search_label": "Search Coin (4-digit Serial)",
+        "redeem_search_mode": "Search Mode",
+        "mode_worker": "By Worker (List Coins)",
+        "mode_coin": "By Coin No (Single)",
+        "coin_owner_info": "🔍 Owner: Passport No **{}**",
+        "coin_not_found": "⚠️ Coin not found or already used.",
         "redeem_search_btn": "Search",
         "redeem_info": "Owned Coins: {}",
         "redeem_reason_label": "Redeem Reason",
         "redeem_btn": "Redeem Selected Coins",
-        "redeem_single_btn": "Redeem This Coin", # [Added]
+        "redeem_single_btn": "Redeem This Coin",
         "redeem_warning": "Select coins to redeem.",
         "redeem_reason_warning": "Please enter a reason.",
         "table_cols": ["Time", "ManagerID", "Name", "Passport", "CoinNo", "Top", "Bottom", "Note"],
@@ -138,7 +137,6 @@ LANG = {
         "col_reason": "Reason",
         "col_manager": "Manager",
         "api_wait": "High traffic, retrying... ({}/{})",
-        # --- Subcon Related ---
         "subcon_select_label": "Select Subcontractor",
         "subcon_balance_fmt": "💰 Current Balance: **{}**",
         "subcon_action_type": "Action Type",
@@ -197,6 +195,25 @@ def update_data_with_retry(worksheet, data, max_retries=5):
                 raise e
     return False
 
+# --- [최적화] 데이터 캐싱 함수 (중요) ---
+def get_cached_logs(force_refresh=False):
+    """
+    세션 상태에 저장된 Logs 데이터를 반환합니다.
+    force_refresh가 True이거나 데이터가 없으면 API를 호출합니다.
+    """
+    if 'cached_logs' not in st.session_state or force_refresh:
+        st.session_state['cached_logs'] = read_data_with_retry(worksheet="Logs", ttl=0)
+    return st.session_state['cached_logs']
+
+def get_cached_subcon_logs(force_refresh=False):
+    if 'cached_subcon_logs' not in st.session_state or force_refresh:
+        try:
+            st.session_state['cached_subcon_logs'] = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
+        except:
+            st.session_state['cached_subcon_logs'] = pd.DataFrame()
+    return st.session_state['cached_subcon_logs']
+
+
 # --- 데이터 성형 함수 ---
 def clean_numeric_str(val, width=0):
     s = str(val).strip()
@@ -245,7 +262,6 @@ def login(username, password):
         return None, None
 
 def clear_inputs():
-    # Tab 1 Inputs
     st.session_state['k_passport'] = ""
     st.session_state['k_pass_check'] = ""
     st.session_state['k_note'] = ""
@@ -257,12 +273,10 @@ def clear_inputs():
     st.session_state['k_top'] = default_val
     st.session_state['k_bot'] = default_val
     
-    # Tab 3 Inputs (Redeem)
     st.session_state['redeem_reason_input'] = ""
     st.session_state['redeem_search_key'] = ""
     st.session_state['redeem_coin_search_key'] = ""
 
-    # Tab 4 Inputs (Subcon)
     st.session_state['subcon_reason_input'] = ""
     st.session_state['subcon_qty_input'] = 1
 
@@ -328,7 +342,7 @@ def main():
         tabs_list = [get_text("tab1"), get_text("tab2")]
         if st.session_state['user_role'] == "Master":
             tabs_list.append(get_text("tab3"))
-            tabs_list.append(get_text("tab4")) # [추가] 협력사 탭
+            tabs_list.append(get_text("tab4"))
         tabs = st.tabs(tabs_list)
 
         # [TAB 1] 코인 지급
@@ -344,12 +358,10 @@ def main():
             col_top_display = "Top_KO" if is_ko else "Top_EN"
             col_bot_display = "Bottom_KO" if is_ko else "Bottom_EN"
             
-            # --- 1. 패스포트 입력 ---
             col1, col2 = st.columns(2)
             passport_no = col1.text_input(get_text("passport_label"), max_chars=5, key="k_passport")
             passport_check = col2.text_input(get_text("passport_check_label"), max_chars=5, key="k_pass_check")
 
-            # --- 2. 2단 분류 ---
             default_opt = get_text("select_default")
             
             top_cats = [default_opt] + sorted(cat_df[col_top_display].unique().tolist())
@@ -362,7 +374,6 @@ def main():
             
             selected_bot = st.selectbox(get_text("cat_bot"), bot_cats, disabled=(selected_top == default_opt), key="k_bot")
 
-            # --- 3. 코인 수량 및 입력창 ---
             coin_count = 0
             selected_row = None
 
@@ -405,6 +416,7 @@ def main():
                     final_coins = [clean_numeric_str(c, 4) for c in entered_coins]
 
                     try:
+                        # [최적화] 캐시된 데이터 사용이 아니라, 지급은 최신 데이터 확인 필수 (중복 방지)
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
                         if not existing_data.empty:
@@ -439,6 +451,9 @@ def main():
                         updated_data = pd.concat([existing_data, new_df], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
                         
+                        # [중요] 업데이트 후 캐시 강제 초기화 (다음 조회 시 최신 데이터 반영)
+                        get_cached_logs(force_refresh=True)
+                        
                         show_result_popup(True, clear_on_ok=True)
                         
                     except Exception as e:
@@ -448,10 +463,12 @@ def main():
         with tabs[1]:
             st.subheader(get_text("header_history"))
             if st.button(get_text("refresh_btn"), key="hist_refresh"):
+                get_cached_logs(force_refresh=True) # 강제 새로고침
                 st.rerun()
                 
             try:
-                all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                # [최적화] 캐시된 데이터 사용
+                all_logs = get_cached_logs()
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']].copy()
                 
                 if not my_logs.empty:
@@ -476,7 +493,6 @@ def main():
             with tabs[2]:
                 st.subheader(get_text("tab3"))
                 
-                # [수정] 검색 방식 선택 (토글)
                 search_mode = st.radio(
                     get_text("redeem_search_mode"),
                     options=["Worker", "Coin"],
@@ -484,6 +500,11 @@ def main():
                     horizontal=True
                 )
                 
+                # [최적화] 새로고침 버튼을 눌렀을 때만 API 호출
+                if st.button(get_text("refresh_btn"), key="redeem_refresh"):
+                    get_cached_logs(force_refresh=True)
+                    st.rerun()
+
                 st.divider()
 
                 # --- A. 근로자 검색 모드 ---
@@ -494,7 +515,8 @@ def main():
 
                     if search_passport:
                         try:
-                            all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                            # [최적화] 캐시된 데이터에서 검색 (API 호출 X)
+                            all_logs = get_cached_logs().copy() # copy 필수
                             clean_search_key = clean_numeric_str(search_passport, 5)
 
                             all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
@@ -540,8 +562,8 @@ def main():
                                     elif not redeem_reason:
                                         st.warning(get_text("redeem_reason_warning"))
                                     else:
-                                        # 사용 처리 로직 (함수화 또는 인라인)
                                         try:
+                                            # [쓰기 작업] 쓰기 전에는 최신 데이터 한 번 로드
                                             refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                             refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                                             refresh_logs['Passport_Clean'] = refresh_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
@@ -582,7 +604,9 @@ def main():
                                                 
                                                 update_data_with_retry(worksheet="Usage", data=updated_usage)
 
-                                            # 성공 팝업 및 초기화
+                                            # [중요] 사용 처리 후 캐시 갱신
+                                            get_cached_logs(force_refresh=True)
+
                                             show_result_popup(True, clear_on_ok=True)
 
                                         except Exception as e:
@@ -601,12 +625,12 @@ def main():
 
                     if search_coin_no:
                         try:
-                            all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                            # [최적화] 캐시된 데이터 사용
+                            all_logs = get_cached_logs().copy()
                             clean_coin_key = clean_numeric_str(search_coin_no, 4)
 
                             all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                             
-                            # 사용되지 않은 코인(*)이 없는 것만 필터링
                             target_row = all_logs[
                                 (all_logs['Coin_Clean'].str.replace("*","") == clean_coin_key) & 
                                 (~all_logs['Coin_Clean'].str.contains(r'\*'))
@@ -623,26 +647,23 @@ def main():
                                     if not redeem_reason_coin:
                                         st.warning(get_text("redeem_reason_warning"))
                                     else:
-                                        # 단건 사용 처리
                                         try:
-                                            # 다시 최신 데이터 로드 (동시성 처리)
+                                            # [쓰기 작업] 최신 데이터 로드
                                             refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                             refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                                             
-                                            # 정확한 행 찾기
                                             mask = (refresh_logs['Coin_Clean'] == clean_coin_key) & \
                                                    (~refresh_logs['Coin_No'].astype(str).str.contains(r'\*'))
                                             
                                             rows_to_update = refresh_logs[mask].index
                                             
                                             if len(rows_to_update) > 0:
-                                                idx = rows_to_update[0] # 첫 번째 매칭만 처리
+                                                idx = rows_to_update[0]
                                                 old_val = str(refresh_logs.at[idx, 'Coin_No'])
                                                 pass_val = str(refresh_logs.at[idx, 'Passport_No'])
                                                 
                                                 refresh_logs.at[idx, 'Coin_No'] = old_val + "*"
                                                 
-                                                # Usage 기록
                                                 now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                                 new_record = {
                                                     "Timestamp": now_ts,
@@ -664,6 +685,9 @@ def main():
                                                 
                                                 update_data_with_retry(worksheet="Usage", data=updated_usage)
                                                 
+                                                # [중요] 사용 후 캐시 갱신
+                                                get_cached_logs(force_refresh=True)
+
                                                 show_result_popup(True, clear_on_ok=True)
                                             else:
                                                 show_result_popup(False, get_text("coin_not_found"))
@@ -675,12 +699,11 @@ def main():
                         except Exception as e:
                             st.error(f"Error: {e}")
 
-# [TAB 4] 협력사 관리 (수정됨)
+        # [TAB 4] 협력사 관리
         if st.session_state['user_role'] == "Master":
             with tabs[3]:
                 st.subheader(get_text("tab4"))
                 
-                # 1. 협력사 목록 로드 (Users 시트의 Role='Subcon')
                 try:
                     users_df = load_users_data()
                     subcon_list = users_df[users_df['Role'] == 'Subcon']['Name'].unique().tolist()
@@ -692,23 +715,22 @@ def main():
                     st.warning("No Subcontractors found in Users sheet.")
                     st.stop()
 
-                # 2. UI 구성
                 selected_subcon = st.selectbox(get_text("subcon_select_label"), [get_text("select_default")] + subcon_list)
                 
+                # [최적화] 잔액 확인용 새로고침 버튼
+                if st.button(get_text("refresh_btn"), key="subcon_refresh"):
+                    get_cached_subcon_logs(force_refresh=True)
+                    st.rerun()
+
                 if selected_subcon != get_text("select_default"):
-                    # 잔액 계산
                     current_balance = 0
                     try:
-                        subcon_logs = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
+                        # [최적화] 캐시된 서브콘 로그 사용
+                        subcon_logs = get_cached_subcon_logs()
                         if not subcon_logs.empty and 'Subcon_Name' in subcon_logs.columns:
-                            # 해당 협력사 로그 필터링
                             df_s = subcon_logs[subcon_logs['Subcon_Name'] == selected_subcon]
-                            
-                            # Give 합계
                             given = df_s[df_s['Type'] == 'Give']['Quantity'].astype(int).sum()
-                            # Use 합계
                             used = df_s[df_s['Type'] == 'Use']['Quantity'].astype(int).sum()
-                            
                             current_balance = given - used
                     except Exception:
                         pass
@@ -717,7 +739,6 @@ def main():
                     
                     st.divider()
                     
-                    # 작업 유형 선택 (지급 vs 사용)
                     action_type = st.radio(
                         get_text("subcon_action_type"), 
                         ["Give", "Use"],
@@ -727,11 +748,9 @@ def main():
                     
                     col_q, col_r = st.columns([1, 3])
                     
-                    # --- [수정 핵심] 에러 방지를 위한 초기화 로직 ---
                     if 'subcon_qty_input' not in st.session_state:
                         st.session_state['subcon_qty_input'] = 1
                     
-                    # value=1 파라미터를 제거하고 session_state에 의존하게 변경
                     qty = col_q.number_input(
                         get_text("subcon_qty_label"), 
                         min_value=1, 
@@ -739,15 +758,12 @@ def main():
                         format="%d", 
                         key="subcon_qty_input"
                     )
-                    # ----------------------------------------------
 
                     reason = col_r.text_input(get_text("subcon_reason_label"), key="subcon_reason_input")
                     
-                    # 버튼 설정
                     btn_label = get_text("subcon_btn_give") if action_type == "Give" else get_text("subcon_btn_use")
                     
                     if st.button(btn_label, type="primary", use_container_width=True):
-                        # 유효성 검사
                         if qty < 1:
                             st.warning(get_text("subcon_warn_qty"))
                         elif not reason:
@@ -755,7 +771,6 @@ def main():
                         elif action_type == "Use" and qty > current_balance:
                             st.warning(get_text("subcon_warn_balance"))
                         else:
-                            # 처리 로직
                             try:
                                 now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 new_record = {
@@ -767,6 +782,7 @@ def main():
                                     "Reason": reason
                                 }
                                 
+                                # [쓰기] 쓰기 때는 최신 데이터 로드 권장
                                 try:
                                     existing_logs = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
                                     updated_logs = pd.concat([existing_logs, pd.DataFrame([new_record])], ignore_index=True)
@@ -775,7 +791,9 @@ def main():
                                 
                                 update_data_with_retry(worksheet="Subcon_Logs", data=updated_logs)
                                 
-                                # 성공 팝업 (clear_inputs 호출됨 -> session_state 값 초기화됨 -> 에러 없이 반영됨)
+                                # [중요] 업데이트 완료 후 캐시 갱신
+                                get_cached_subcon_logs(force_refresh=True)
+
                                 show_result_popup(True, clear_on_ok=True)
                                 
                             except Exception as e:
@@ -783,4 +801,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
