@@ -292,7 +292,7 @@ def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
 
 # --- [중요] 쿠키 매니저 초기화 함수 ---
 # @st.cache_resource를 써서 매니저를 한 번만 로드합니다.
-@st.cache_resource(experimental_allow_widgets=True)
+@st.cache_resource
 def get_manager():
     return stx.CookieManager()
 
@@ -821,3 +821,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
