@@ -675,7 +675,7 @@ def main():
                         except Exception as e:
                             st.error(f"Error: {e}")
 
-        # [TAB 4] 협력사 관리 (신규 추가)
+# [TAB 4] 협력사 관리 (수정됨)
         if st.session_state['user_role'] == "Master":
             with tabs[3]:
                 st.subheader(get_text("tab4"))
@@ -711,7 +711,6 @@ def main():
                             
                             current_balance = given - used
                     except Exception:
-                        # 시트가 없거나 비어있으면 잔액 0 처리 (초기 상태)
                         pass
                     
                     st.info(get_text("subcon_balance_fmt", current_balance))
@@ -727,10 +726,24 @@ def main():
                     )
                     
                     col_q, col_r = st.columns([1, 3])
-                    qty = col_q.number_input(get_text("subcon_qty_label"), min_value=1, value=1, step=1, format="%d", key="subcon_qty_input")
+                    
+                    # --- [수정 핵심] 에러 방지를 위한 초기화 로직 ---
+                    if 'subcon_qty_input' not in st.session_state:
+                        st.session_state['subcon_qty_input'] = 1
+                    
+                    # value=1 파라미터를 제거하고 session_state에 의존하게 변경
+                    qty = col_q.number_input(
+                        get_text("subcon_qty_label"), 
+                        min_value=1, 
+                        step=1, 
+                        format="%d", 
+                        key="subcon_qty_input"
+                    )
+                    # ----------------------------------------------
+
                     reason = col_r.text_input(get_text("subcon_reason_label"), key="subcon_reason_input")
                     
-                    # 버튼 (지급=초록색 텍스트 느낌, 사용=빨간색 텍스트 느낌을 위해 이모지 사용 및 라벨 분기)
+                    # 버튼 설정
                     btn_label = get_text("subcon_btn_give") if action_type == "Give" else get_text("subcon_btn_use")
                     
                     if st.button(btn_label, type="primary", use_container_width=True):
@@ -762,8 +775,7 @@ def main():
                                 
                                 update_data_with_retry(worksheet="Subcon_Logs", data=updated_logs)
                                 
-                                success_msg = get_text("subcon_success_give") if action_type == "Give" else get_text("subcon_success_use")
-                                # 팝업 호출 (성공 시 입력창 초기화 포함)
+                                # 성공 팝업 (clear_inputs 호출됨 -> session_state 값 초기화됨 -> 에러 없이 반영됨)
                                 show_result_popup(True, clear_on_ok=True)
                                 
                             except Exception as e:
@@ -771,3 +783,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
