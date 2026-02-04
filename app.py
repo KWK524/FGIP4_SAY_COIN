@@ -22,10 +22,11 @@ LANG = {
         "tab1": "💰 코인 지급",
         "tab2": "📋 지급 기록",
         "tab3": "🏪 코인 사용(상품교환)",
+        "tab4": "🤝 협력사 관리",  # [추가]
         "header_reward": "근로자 안전 행동 보상",
         "passport_label": "HSE Passport No", 
         "passport_check_label": "HSE Passport No (Confirm)",
-        "coin_input_guide": "**ℹ️ {}개의 코인 번호를 입력하세요.** (4자리 숫자)", # [추가됨]
+        "coin_input_guide": "**ℹ️ {}개의 코인 번호를 입력하세요.** (4자리 숫자)",
         "coin_input_label": "코인 일련번호 입력 ({}/{}번째)",
         "cat_top": "상위 분류",
         "cat_bot": "하위 분류",
@@ -44,10 +45,17 @@ LANG = {
         "no_data": "데이터가 없습니다.",
         "header_history": "나의 지급 내역",
         "redeem_search_label": "근로자 조회 (HSE Passport No)",
+        "redeem_coin_search_label": "코인 조회 (일련번호 4자리)", # [추가]
+        "redeem_search_mode": "검색 방식 선택", # [추가]
+        "mode_worker": "근로자 검색 (보유 코인 목록)", # [추가]
+        "mode_coin": "코인 번호 검색 (단건 조회)", # [추가]
+        "coin_owner_info": "🔍 소유자 정보: Passport No **{}**", # [추가]
+        "coin_not_found": "⚠️ 해당 코인을 찾을 수 없거나 이미 사용되었습니다.", # [추가]
         "redeem_search_btn": "조회",
         "redeem_info": "보유 코인: {} 개",
         "redeem_reason_label": "사용 사유",
         "redeem_btn": "선택한 코인 사용 처리",
+        "redeem_single_btn": "해당 코인 사용 처리", # [추가]
         "redeem_warning": "사용할 코인을 선택해주세요.",
         "redeem_reason_warning": "사용 사유를 입력해주세요.",
         "table_cols": ["시간", "관리자ID", "이름", "패스포트", "코인번호", "상위분류", "하위분류", "비고"],
@@ -57,7 +65,22 @@ LANG = {
         "col_timestamp": "지급 일시",
         "col_reason": "사유",
         "col_manager": "지급자",
-        "api_wait": "통신량이 많아 대기 중... ({}/{})"
+        "api_wait": "통신량이 많아 대기 중... ({}/{})",
+        # --- 협력사 탭 관련 ---
+        "subcon_select_label": "협력사(Subcontractor) 선택",
+        "subcon_balance_fmt": "💰 현재 보유 수량: **{}** 개",
+        "subcon_action_type": "작업 유형",
+        "action_give": "지급 (Provision)",
+        "action_use": "사용 (Redeem)",
+        "subcon_qty_label": "수량 (개)",
+        "subcon_reason_label": "사유 (필수)",
+        "subcon_btn_give": "✅ 지급 처리",
+        "subcon_btn_use": "🛑 사용 처리",
+        "subcon_warn_qty": "수량은 1 이상의 정수여야 합니다.",
+        "subcon_warn_reason": "사유를 입력해주세요.",
+        "subcon_warn_balance": "보유 수량이 부족합니다.",
+        "subcon_success_give": "협력사 지급 완료!",
+        "subcon_success_use": "협력사 사용 완료!"
     },
     "EN": {
         "title": "FGIP4 S.A.Y COIN",
@@ -71,10 +94,11 @@ LANG = {
         "tab1": "💰 Reward Coin",
         "tab2": "📋 History",
         "tab3": "🏪 Redeem Coin",
+        "tab4": "🤝 Subcontractor", # [Added]
         "header_reward": "Safety Action Reward",
         "passport_label": "HSE Passport No",
         "passport_check_label": "HSE Passport No (Confirm)",
-        "coin_input_guide": "**ℹ️ Enter {} coin serial numbers.** (4 digits)", # [Added]
+        "coin_input_guide": "**ℹ️ Enter {} coin serial numbers.** (4 digits)",
         "coin_input_label": "Enter Coin Serial ({}/{})",
         "cat_top": "Category (Top)",
         "cat_bot": "Category (Bottom)",
@@ -93,10 +117,17 @@ LANG = {
         "no_data": "No data found.",
         "header_history": "My History",
         "redeem_search_label": "Search Worker (HSE Passport No)",
+        "redeem_coin_search_label": "Search Coin (4-digit Serial)", # [Added]
+        "redeem_search_mode": "Search Mode", # [Added]
+        "mode_worker": "By Worker (List Coins)", # [Added]
+        "mode_coin": "By Coin No (Single)", # [Added]
+        "coin_owner_info": "🔍 Owner: Passport No **{}**", # [Added]
+        "coin_not_found": "⚠️ Coin not found or already used.", # [Added]
         "redeem_search_btn": "Search",
         "redeem_info": "Owned Coins: {}",
         "redeem_reason_label": "Redeem Reason",
         "redeem_btn": "Redeem Selected Coins",
+        "redeem_single_btn": "Redeem This Coin", # [Added]
         "redeem_warning": "Select coins to redeem.",
         "redeem_reason_warning": "Please enter a reason.",
         "table_cols": ["Time", "ManagerID", "Name", "Passport", "CoinNo", "Top", "Bottom", "Note"],
@@ -106,7 +137,22 @@ LANG = {
         "col_timestamp": "Date",
         "col_reason": "Reason",
         "col_manager": "Manager",
-        "api_wait": "High traffic, retrying... ({}/{})"
+        "api_wait": "High traffic, retrying... ({}/{})",
+        # --- Subcon Related ---
+        "subcon_select_label": "Select Subcontractor",
+        "subcon_balance_fmt": "💰 Current Balance: **{}**",
+        "subcon_action_type": "Action Type",
+        "action_give": "Give (Provision)",
+        "action_use": "Use (Redeem)",
+        "subcon_qty_label": "Quantity",
+        "subcon_reason_label": "Reason (Mandatory)",
+        "subcon_btn_give": "✅ Submit (Give)",
+        "subcon_btn_use": "🛑 Submit (Use)",
+        "subcon_warn_qty": "Quantity must be > 0.",
+        "subcon_warn_reason": "Please enter a reason.",
+        "subcon_warn_balance": "Insufficient balance.",
+        "subcon_success_give": "Provision Success!",
+        "subcon_success_use": "Redemption Success!"
     }
 }
 
@@ -199,6 +245,7 @@ def login(username, password):
         return None, None
 
 def clear_inputs():
+    # Tab 1 Inputs
     st.session_state['k_passport'] = ""
     st.session_state['k_pass_check'] = ""
     st.session_state['k_note'] = ""
@@ -209,6 +256,15 @@ def clear_inputs():
     default_val = get_text("select_default")
     st.session_state['k_top'] = default_val
     st.session_state['k_bot'] = default_val
+    
+    # Tab 3 Inputs (Redeem)
+    st.session_state['redeem_reason_input'] = ""
+    st.session_state['redeem_search_key'] = ""
+    st.session_state['redeem_coin_search_key'] = ""
+
+    # Tab 4 Inputs (Subcon)
+    st.session_state['subcon_reason_input'] = ""
+    st.session_state['subcon_qty_input'] = 1
 
 @st.dialog("알림")
 def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
@@ -272,6 +328,7 @@ def main():
         tabs_list = [get_text("tab1"), get_text("tab2")]
         if st.session_state['user_role'] == "Master":
             tabs_list.append(get_text("tab3"))
+            tabs_list.append(get_text("tab4")) # [추가] 협력사 탭
         tabs = st.tabs(tabs_list)
 
         # [TAB 1] 코인 지급
@@ -321,7 +378,6 @@ def main():
             
             entered_coins = []
             if coin_count > 0:
-                # [수정됨] 안내 문구 번역 적용
                 st.markdown(get_text("coin_input_guide", coin_count))
                 cols = st.columns(min(coin_count, 4))
                 for i in range(coin_count):
@@ -419,108 +475,299 @@ def main():
         if st.session_state['user_role'] == "Master":
             with tabs[2]:
                 st.subheader(get_text("tab3"))
-                col_s1, col_s2 = st.columns([3, 1])
-                search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=5)
-                do_search = col_s2.button(get_text("redeem_search_btn"), use_container_width=True)
+                
+                # [수정] 검색 방식 선택 (토글)
+                search_mode = st.radio(
+                    get_text("redeem_search_mode"),
+                    options=["Worker", "Coin"],
+                    format_func=lambda x: get_text("mode_worker") if x == "Worker" else get_text("mode_coin"),
+                    horizontal=True
+                )
+                
+                st.divider()
 
-                if search_passport:
-                    try:
-                        all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
-                        clean_search_key = clean_numeric_str(search_passport, 5)
+                # --- A. 근로자 검색 모드 ---
+                if search_mode == "Worker":
+                    col_s1, col_s2 = st.columns([3, 1])
+                    search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=5, key="redeem_search_key")
+                    do_search = col_s2.button(get_text("redeem_search_btn"), use_container_width=True)
 
-                        all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
-                        all_logs['Passport_Clean'] = all_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
-                        
-                        valid_logs = all_logs[~all_logs['Coin_Clean'].str.contains(r'\*', regex=True)].copy()
-                        target_logs = valid_logs[valid_logs['Passport_Clean'] == clean_search_key].copy()
-                        
-                        count = len(target_logs)
-                        st.metric(label="Available Coins", value=f"{count} EA")
+                    if search_passport:
+                        try:
+                            all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                            clean_search_key = clean_numeric_str(search_passport, 5)
 
-                        if count > 0:
-                            is_ko = (st.session_state['language'] == "KO")
-                            show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
-
-                            target_logs['Coin_No'] = target_logs['Coin_Clean']
-                            display_df = target_logs[['Coin_No', 'Timestamp', show_bot, 'Manager_Name']]
+                            all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                            all_logs['Passport_Clean'] = all_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
                             
-                            st.write(get_text("redeem_table_title"))
-                            display_df.insert(0, "Select", False)
+                            valid_logs = all_logs[~all_logs['Coin_Clean'].str.contains(r'\*', regex=True)].copy()
+                            target_logs = valid_logs[valid_logs['Passport_Clean'] == clean_search_key].copy()
                             
-                            edited_df = st.data_editor(
-                                display_df,
-                                column_config={
-                                    "Select": st.column_config.CheckboxColumn(get_text("col_select"), default=False),
-                                    "Coin_No": get_text("col_coin_no"),
-                                    "Timestamp": get_text("col_timestamp"),
-                                    show_bot: get_text("col_reason"),
-                                    "Manager_Name": get_text("col_manager")
-                                },
-                                disabled=["Coin_No", "Timestamp", show_bot, "Manager_Name"],
-                                hide_index=True,
-                                use_container_width=True
-                            )
+                            count = len(target_logs)
+                            st.metric(label="Available Coins", value=f"{count} EA")
 
-                            redeem_reason = st.text_input(get_text("redeem_reason_label"))
-                            
-                            if st.button(get_text("redeem_btn"), type="primary"):
-                                selected_coins = edited_df[edited_df["Select"] == True]["Coin_No"].tolist()
+                            if count > 0:
+                                is_ko = (st.session_state['language'] == "KO")
+                                show_bot = "Bottom_KO" if is_ko else "Bottom_EN"
+
+                                target_logs['Coin_No'] = target_logs['Coin_Clean']
+                                display_df = target_logs[['Coin_No', 'Timestamp', show_bot, 'Manager_Name']]
                                 
-                                if not selected_coins:
-                                    st.warning(get_text("redeem_warning"))
-                                elif not redeem_reason:
-                                    st.warning(get_text("redeem_reason_warning"))
-                                else:
-                                    try:
-                                        refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
-                                        refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
-                                        refresh_logs['Passport_Clean'] = refresh_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
+                                st.write(get_text("redeem_table_title"))
+                                display_df.insert(0, "Select", False)
+                                
+                                edited_df = st.data_editor(
+                                    display_df,
+                                    column_config={
+                                        "Select": st.column_config.CheckboxColumn(get_text("col_select"), default=False),
+                                        "Coin_No": get_text("col_coin_no"),
+                                        "Timestamp": get_text("col_timestamp"),
+                                        show_bot: get_text("col_reason"),
+                                        "Manager_Name": get_text("col_manager")
+                                    },
+                                    disabled=["Coin_No", "Timestamp", show_bot, "Manager_Name"],
+                                    hide_index=True,
+                                    use_container_width=True
+                                )
 
-                                        usage_records = []
-                                        now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                        
-                                        selected_clean = [clean_numeric_str(c, 4).replace("*","") for c in selected_coins]
-                                        mask = (refresh_logs['Coin_Clean'].isin(selected_clean)) & \
-                                               (refresh_logs['Passport_Clean'] == clean_search_key)
-                                        
-                                        rows_to_update = refresh_logs[mask].index
-                                        
-                                        for idx in rows_to_update:
-                                            old_val = str(refresh_logs.at[idx, 'Coin_No'])
-                                            pass_val = str(refresh_logs.at[idx, 'Passport_No'])
-                                            if "*" not in old_val:
+                                redeem_reason = st.text_input(get_text("redeem_reason_label"), key="redeem_reason_input")
+                                
+                                if st.button(get_text("redeem_btn"), type="primary"):
+                                    selected_coins = edited_df[edited_df["Select"] == True]["Coin_No"].tolist()
+                                    
+                                    if not selected_coins:
+                                        st.warning(get_text("redeem_warning"))
+                                    elif not redeem_reason:
+                                        st.warning(get_text("redeem_reason_warning"))
+                                    else:
+                                        # 사용 처리 로직 (함수화 또는 인라인)
+                                        try:
+                                            refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                                            refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                                            refresh_logs['Passport_Clean'] = refresh_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
+
+                                            usage_records = []
+                                            now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                            
+                                            selected_clean = [clean_numeric_str(c, 4).replace("*","") for c in selected_coins]
+                                            mask = (refresh_logs['Coin_Clean'].isin(selected_clean)) & \
+                                                   (refresh_logs['Passport_Clean'] == clean_search_key)
+                                            
+                                            rows_to_update = refresh_logs[mask].index
+                                            
+                                            for idx in rows_to_update:
+                                                old_val = str(refresh_logs.at[idx, 'Coin_No'])
+                                                pass_val = str(refresh_logs.at[idx, 'Passport_No'])
+                                                if "*" not in old_val:
+                                                    refresh_logs.at[idx, 'Coin_No'] = old_val + "*"
+                                                    usage_records.append({
+                                                        "Timestamp": now_ts,
+                                                        "Manager_ID": st.session_state['user_id'],
+                                                        "Manager_Name": st.session_state['user_name'],
+                                                        "Passport_No": pass_val,
+                                                        "Coin_No": clean_numeric_str(old_val, 4),
+                                                        "Reason": redeem_reason
+                                                    })
+                                            
+                                            refresh_logs = refresh_logs.drop(columns=['Coin_Clean', 'Passport_Clean'], errors='ignore')
+                                            update_data_with_retry(worksheet="Logs", data=refresh_logs)
+                                            
+                                            if usage_records:
+                                                new_usage_df = pd.DataFrame(usage_records).astype(str)
+                                                try:
+                                                    existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
+                                                    updated_usage = pd.concat([existing_usage, new_usage_df], ignore_index=True)
+                                                except Exception:
+                                                    updated_usage = new_usage_df
+                                                
+                                                update_data_with_retry(worksheet="Usage", data=updated_usage)
+
+                                            # 성공 팝업 및 초기화
+                                            show_result_popup(True, clear_on_ok=True)
+
+                                        except Exception as e:
+                                            show_result_popup(False, str(e))
+
+                            else:
+                                st.info(get_text("no_data"))
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+
+                # --- B. 코인 번호 검색 모드 ---
+                else:
+                    col_c1, col_c2 = st.columns([3, 1])
+                    search_coin_no = col_c1.text_input(get_text("redeem_coin_search_label"), max_chars=4, key="redeem_coin_search_key")
+                    do_search_coin = col_c2.button(get_text("redeem_search_btn"), use_container_width=True)
+
+                    if search_coin_no:
+                        try:
+                            all_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                            clean_coin_key = clean_numeric_str(search_coin_no, 4)
+
+                            all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                            
+                            # 사용되지 않은 코인(*)이 없는 것만 필터링
+                            target_row = all_logs[
+                                (all_logs['Coin_Clean'].str.replace("*","") == clean_coin_key) & 
+                                (~all_logs['Coin_Clean'].str.contains(r'\*'))
+                            ]
+
+                            if not target_row.empty:
+                                row_data = target_row.iloc[0]
+                                owner_passport = clean_numeric_str(row_data['Passport_No'], 5)
+                                
+                                st.info(get_text("coin_owner_info", owner_passport))
+                                redeem_reason_coin = st.text_input(get_text("redeem_reason_label"), key="redeem_reason_input")
+                                
+                                if st.button(get_text("redeem_single_btn"), type="primary"):
+                                    if not redeem_reason_coin:
+                                        st.warning(get_text("redeem_reason_warning"))
+                                    else:
+                                        # 단건 사용 처리
+                                        try:
+                                            # 다시 최신 데이터 로드 (동시성 처리)
+                                            refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
+                                            refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
+                                            
+                                            # 정확한 행 찾기
+                                            mask = (refresh_logs['Coin_Clean'] == clean_coin_key) & \
+                                                   (~refresh_logs['Coin_No'].astype(str).str.contains(r'\*'))
+                                            
+                                            rows_to_update = refresh_logs[mask].index
+                                            
+                                            if len(rows_to_update) > 0:
+                                                idx = rows_to_update[0] # 첫 번째 매칭만 처리
+                                                old_val = str(refresh_logs.at[idx, 'Coin_No'])
+                                                pass_val = str(refresh_logs.at[idx, 'Passport_No'])
+                                                
                                                 refresh_logs.at[idx, 'Coin_No'] = old_val + "*"
-                                                usage_records.append({
+                                                
+                                                # Usage 기록
+                                                now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                                new_record = {
                                                     "Timestamp": now_ts,
                                                     "Manager_ID": st.session_state['user_id'],
                                                     "Manager_Name": st.session_state['user_name'],
                                                     "Passport_No": pass_val,
                                                     "Coin_No": clean_numeric_str(old_val, 4),
-                                                    "Reason": redeem_reason
-                                                })
-                                        
-                                        refresh_logs = refresh_logs.drop(columns=['Coin_Clean', 'Passport_Clean'], errors='ignore')
-                                        update_data_with_retry(worksheet="Logs", data=refresh_logs)
-                                        
-                                        if usage_records:
-                                            new_usage_df = pd.DataFrame(usage_records).astype(str)
-                                            try:
-                                                existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
-                                                updated_usage = pd.concat([existing_usage, new_usage_df], ignore_index=True)
-                                            except Exception:
-                                                updated_usage = new_usage_df
-                                            
-                                            update_data_with_retry(worksheet="Usage", data=updated_usage)
+                                                    "Reason": redeem_reason_coin
+                                                }
+                                                
+                                                refresh_logs = refresh_logs.drop(columns=['Coin_Clean'], errors='ignore')
+                                                update_data_with_retry(worksheet="Logs", data=refresh_logs)
+                                                
+                                                try:
+                                                    existing_usage = read_data_with_retry(worksheet="Usage", ttl=0)
+                                                    updated_usage = pd.concat([existing_usage, pd.DataFrame([new_record]).astype(str)], ignore_index=True)
+                                                except Exception:
+                                                    updated_usage = pd.DataFrame([new_record]).astype(str)
+                                                
+                                                update_data_with_retry(worksheet="Usage", data=updated_usage)
+                                                
+                                                show_result_popup(True, clear_on_ok=True)
+                                            else:
+                                                show_result_popup(False, get_text("coin_not_found"))
 
-                                        st.success(f"{len(usage_records)} EA - {get_text('success_msg')}")
-                                        st.rerun()
+                                        except Exception as e:
+                                            show_result_popup(False, str(e))
+                            else:
+                                st.warning(get_text("coin_not_found"))
+                        except Exception as e:
+                            st.error(f"Error: {e}")
 
-                                    except Exception as e:
-                                        st.error(f"Error: {e}")
+        # [TAB 4] 협력사 관리 (신규 추가)
+        if st.session_state['user_role'] == "Master":
+            with tabs[3]:
+                st.subheader(get_text("tab4"))
+                
+                # 1. 협력사 목록 로드 (Users 시트의 Role='Subcon')
+                try:
+                    users_df = load_users_data()
+                    subcon_list = users_df[users_df['Role'] == 'Subcon']['Name'].unique().tolist()
+                    subcon_list.sort()
+                except:
+                    subcon_list = []
+                
+                if not subcon_list:
+                    st.warning("No Subcontractors found in Users sheet.")
+                    st.stop()
+
+                # 2. UI 구성
+                selected_subcon = st.selectbox(get_text("subcon_select_label"), [get_text("select_default")] + subcon_list)
+                
+                if selected_subcon != get_text("select_default"):
+                    # 잔액 계산
+                    current_balance = 0
+                    try:
+                        subcon_logs = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
+                        if not subcon_logs.empty and 'Subcon_Name' in subcon_logs.columns:
+                            # 해당 협력사 로그 필터링
+                            df_s = subcon_logs[subcon_logs['Subcon_Name'] == selected_subcon]
+                            
+                            # Give 합계
+                            given = df_s[df_s['Type'] == 'Give']['Quantity'].astype(int).sum()
+                            # Use 합계
+                            used = df_s[df_s['Type'] == 'Use']['Quantity'].astype(int).sum()
+                            
+                            current_balance = given - used
+                    except Exception:
+                        # 시트가 없거나 비어있으면 잔액 0 처리 (초기 상태)
+                        pass
+                    
+                    st.info(get_text("subcon_balance_fmt", current_balance))
+                    
+                    st.divider()
+                    
+                    # 작업 유형 선택 (지급 vs 사용)
+                    action_type = st.radio(
+                        get_text("subcon_action_type"), 
+                        ["Give", "Use"],
+                        format_func=lambda x: get_text("action_give") if x == "Give" else get_text("action_use"),
+                        horizontal=True
+                    )
+                    
+                    col_q, col_r = st.columns([1, 3])
+                    qty = col_q.number_input(get_text("subcon_qty_label"), min_value=1, value=1, step=1, format="%d", key="subcon_qty_input")
+                    reason = col_r.text_input(get_text("subcon_reason_label"), key="subcon_reason_input")
+                    
+                    # 버튼 (지급=초록색 텍스트 느낌, 사용=빨간색 텍스트 느낌을 위해 이모지 사용 및 라벨 분기)
+                    btn_label = get_text("subcon_btn_give") if action_type == "Give" else get_text("subcon_btn_use")
+                    
+                    if st.button(btn_label, type="primary", use_container_width=True):
+                        # 유효성 검사
+                        if qty < 1:
+                            st.warning(get_text("subcon_warn_qty"))
+                        elif not reason:
+                            st.warning(get_text("subcon_warn_reason"))
+                        elif action_type == "Use" and qty > current_balance:
+                            st.warning(get_text("subcon_warn_balance"))
                         else:
-                            st.info(get_text("no_data"))
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                            # 처리 로직
+                            try:
+                                now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                new_record = {
+                                    "Timestamp": now_ts,
+                                    "Manager_Name": st.session_state['user_name'],
+                                    "Subcon_Name": selected_subcon,
+                                    "Type": action_type,
+                                    "Quantity": int(qty),
+                                    "Reason": reason
+                                }
+                                
+                                try:
+                                    existing_logs = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
+                                    updated_logs = pd.concat([existing_logs, pd.DataFrame([new_record])], ignore_index=True)
+                                except Exception:
+                                    updated_logs = pd.DataFrame([new_record])
+                                
+                                update_data_with_retry(worksheet="Subcon_Logs", data=updated_logs)
+                                
+                                success_msg = get_text("subcon_success_give") if action_type == "Give" else get_text("subcon_success_use")
+                                # 팝업 호출 (성공 시 입력창 초기화 포함)
+                                show_result_popup(True, clear_on_ok=True)
+                                
+                            except Exception as e:
+                                show_result_popup(False, str(e))
 
 if __name__ == "__main__":
     main()
