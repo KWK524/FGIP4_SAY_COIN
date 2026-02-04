@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import time
 import re
-from datetime import datetime, timedelta # [추가] 쿠키 유효기간 설정을 위해 필요
+from datetime import datetime, timedelta
 from streamlit_gsheets import GSheetsConnection
-import extra_streamlit_components as stx # [추가] 쿠키 관리 라이브러리
+import extra_streamlit_components as stx
 
 # --- 설정: 페이지 기본 세팅 ---
 st.set_page_config(page_title="FGIP4 S.A.Y COIN", page_icon="🪙")
 
-# --- 다국어 텍스트 사전 (기존과 동일) ---
+# --- 다국어 텍스트 사전 ---
 LANG = {
     "KO": {
         "title": "FGIP4 S.A.Y COIN",
@@ -196,7 +196,7 @@ def update_data_with_retry(worksheet, data, max_retries=5):
                 raise e
     return False
 
-# --- 데이터 캐싱 함수 ---
+# --- 데이터 캐싱 함수 (API 호출 최소화) ---
 def get_cached_logs(force_refresh=False):
     if 'cached_logs' not in st.session_state or force_refresh:
         st.session_state['cached_logs'] = read_data_with_retry(worksheet="Logs", ttl=0)
@@ -249,7 +249,6 @@ def login(username, password):
         else:
             users_df['Role'] = users_df['Role'].fillna("").astype(str)
 
-        # 비밀번호 비교
         user = users_df[(users_df['ID'] == str(username).strip()) & (users_df['PW'] == str(password).strip())]
         
         if not user.empty:
@@ -291,7 +290,7 @@ def show_result_popup(is_success, error_msg=None, clear_on_ok=False):
             st.rerun()
 
 # --- [중요] 쿠키 매니저 초기화 함수 ---
-# 캐싱 데코레이터 삭제함
+# CachedWidgetWarning 방지를 위해 데코레이터 없음
 def get_manager():
     return stx.CookieManager(key="auth_cookie_manager")
 
@@ -303,34 +302,34 @@ def main():
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
         st.session_state['user_role'] = ""
-
+    
     if 'language' not in st.session_state:
         st.session_state['language'] = "KO"
 
-    # 3. [자동 로그인 로직] 쿠키 확인
-    # "fgip4_auth"라는 이름의 쿠키가 있는지 확인
-    cookie_val = cookie_manager.get("fgip4_auth")
-    
-    # 아직 로그인이 안 되어 있는데 쿠키가 있다면 -> 자동 로그인 시도
-    if not st.session_state['logged_in'] and cookie_val:
-        try:
-            # 쿠키 형식: "아이디:비밀번호" (구분자 :)
-            c_id, c_pw = cookie_val.split(":", 1)
-            # 서버(시트)에서 유저 확인
-            user_name, user_role = login(c_id, c_pw)
-            if user_name:
-                st.session_state['logged_in'] = True
-                st.session_state['user_name'] = user_name
-                st.session_state['user_id'] = c_id
-                st.session_state['user_role'] = user_role
-                st.toast(f"자동 로그인 되었습니다: {user_name}", icon="👋")
-                time.sleep(0.5)
-                st.rerun() # 화면 갱신
-        except:
-            # 쿠키가 손상되었거나 형식이 안 맞으면 무시
-            pass
+    # 3. [자동 로그인 로직] 
+    # logout_pressed 플래그가 있으면 쿠키 확인 건너뜀 (무한 재로그인 방지)
+    if st.session_state.get('logout_pressed', False):
+        st.session_state['logout_pressed'] = False
+    else:
+        cookie_val = cookie_manager.get("fgip4_auth")
+        # 쿠키 값이 존재하고, 빈 문자열이 아닐 때만 로그인 시도
+        if not st.session_state['logged_in'] and cookie_val and str(cookie_val).strip() != "":
+            try:
+                if ":" in cookie_val:
+                    c_id, c_pw = cookie_val.split(":", 1)
+                    user_name, user_role = login(c_id, c_pw)
+                    if user_name:
+                        st.session_state['logged_in'] = True
+                        st.session_state['user_name'] = user_name
+                        st.session_state['user_id'] = c_id
+                        st.session_state['user_role'] = user_role
+                        st.toast(f"자동 로그인 되었습니다: {user_name}", icon="👋")
+                        time.sleep(0.5)
+                        st.rerun()
+            except:
+                pass
 
-# --- 사이드바 ---
+    # --- 사이드바 ---
     with st.sidebar:
         st.header("Settings")
         lang_choice = st.radio("Language", ["Korean", "English"], 
@@ -342,26 +341,23 @@ def main():
             role_display = "Admin" if st.session_state['user_role'] == "Master" else "User"
             st.info(get_text("welcome", st.session_state['user_name'], role_display))
             
-            # [수정된 로그아웃 로직]
+            # [로그아웃 버튼]
             if st.button(get_text("logout_btn")):
-                # 1. 쿠키 삭제 시도 (에러 무시 처리 추가)
-                try:
-                    cookie_manager.delete("fgip4_auth")
-                except KeyError:
-                    # 쿠키가 이미 없으면 에러가 나는데, 그냥 무시하고 넘어가면 됩니다.
-                    pass
+                # 1. 쿠키를 빈 값으로 덮어쓰고 만료시킴 (삭제보다 확실함)
+                cookie_manager.set("fgip4_auth", "", expires_at=datetime.now())
                 
-                # 2. 세션 상태 초기화
+                # 2. 세션 초기화
                 st.session_state['logged_in'] = False
                 st.session_state['user_role'] = ""
                 st.session_state['user_name'] = ""
                 st.session_state['user_id'] = ""
                 
-                # 3. 브라우저가 처리를 완료할 시간을 줌
-                st.toast("로그아웃 되었습니다.", icon="👋")
-                time.sleep(1) 
+                # 3. 로그아웃 플래그 설정 (새로고침 시 자동로그인 방지)
+                st.session_state['logout_pressed'] = True
                 
-                # 4. 새로고침
+                st.toast("로그아웃 되었습니다.", icon="👋")
+                time.sleep(1) # 브라우저 처리 대기
+                
                 st.rerun()
 
     # --- 로그인 화면 ---
@@ -373,7 +369,7 @@ def main():
             submit = st.form_submit_button(get_text("login_btn"))
             
             if submit:
-                load_users_data.clear() # 로그인 시도 시 유저정보 최신화
+                load_users_data.clear() # 최신 유저 정보 로드
                 user_name, user_role = login(username, password)
                 if user_name:
                     st.session_state['logged_in'] = True
@@ -381,19 +377,17 @@ def main():
                     st.session_state['user_id'] = username
                     st.session_state['user_role'] = user_role
                     
-                    # [로그인 성공 시] 쿠키 저장 (유효기간 7일)
+                    # [로그인 성공 시] 쿠키 저장 (7일 유효)
                     cookie_val = f"{username}:{password}"
                     cookie_manager.set("fgip4_auth", cookie_val, expires_at=datetime.now() + timedelta(days=7))
                     
-                    # [중요 수정] 브라우저가 쿠키를 저장할 시간을 줍니다 (1초 대기)
-                    st.toast("로그인 성공! 잠시 후 이동합니다...", icon="✅")
-                    time.sleep(1) 
-                    
+                    st.toast("로그인 성공! 이동합니다...", icon="✅")
+                    time.sleep(1) # 쿠키 저장 대기
                     st.rerun()
                 else:
                     st.error(get_text("login_fail"))
 
-    # --- 메인 앱 화면 (기존 코드 유지) ---
+    # --- 메인 앱 화면 ---
     else:
         st.title(get_text("title"))
         tabs_list = [get_text("tab1"), get_text("tab2")]
@@ -473,6 +467,7 @@ def main():
                     final_coins = [clean_numeric_str(c, 4) for c in entered_coins]
 
                     try:
+                        # [쓰기] 중복 검사를 위해 최신 데이터 로드
                         existing_data = read_data_with_retry(worksheet="Logs", ttl=0)
                         
                         if not existing_data.empty:
@@ -507,6 +502,7 @@ def main():
                         updated_data = pd.concat([existing_data, new_df], ignore_index=True)
                         update_data_with_retry(worksheet="Logs", data=updated_data)
                         
+                        # [중요] 업데이트 후 캐시 갱신
                         get_cached_logs(force_refresh=True)
                         show_result_popup(True, clear_on_ok=True)
                         
@@ -521,6 +517,7 @@ def main():
                 st.rerun()
                 
             try:
+                # [읽기] 캐시된 데이터 사용
                 all_logs = get_cached_logs()
                 my_logs = all_logs[all_logs['Manager_ID'] == st.session_state['user_id']].copy()
                 
@@ -559,6 +556,7 @@ def main():
 
                 st.divider()
 
+                # A. 근로자 검색 모드
                 if search_mode == "Worker":
                     col_s1, col_s2 = st.columns([3, 1])
                     search_passport = col_s1.text_input(get_text("redeem_search_label"), max_chars=5, key="redeem_search_key")
@@ -566,6 +564,7 @@ def main():
 
                     if search_passport:
                         try:
+                            # [읽기] 캐시 사용
                             all_logs = get_cached_logs().copy()
                             clean_search_key = clean_numeric_str(search_passport, 5)
 
@@ -613,6 +612,7 @@ def main():
                                         st.warning(get_text("redeem_reason_warning"))
                                     else:
                                         try:
+                                            # [쓰기] 최신 데이터 로드
                                             refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                             refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                                             refresh_logs['Passport_Clean'] = refresh_logs['Passport_No'].apply(lambda x: clean_numeric_str(x, 5))
@@ -664,13 +664,15 @@ def main():
                         except Exception as e:
                             st.error(f"Error: {e}")
 
-                else: # Coin Mode
+                # B. 코인 번호 검색 모드
+                else: 
                     col_c1, col_c2 = st.columns([3, 1])
                     search_coin_no = col_c1.text_input(get_text("redeem_coin_search_label"), max_chars=4, key="redeem_coin_search_key")
                     do_search_coin = col_c2.button(get_text("redeem_search_btn"), use_container_width=True)
 
                     if search_coin_no:
                         try:
+                            # [읽기] 캐시 사용
                             all_logs = get_cached_logs().copy()
                             clean_coin_key = clean_numeric_str(search_coin_no, 4)
                             all_logs['Coin_Clean'] = all_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
@@ -692,6 +694,7 @@ def main():
                                         st.warning(get_text("redeem_reason_warning"))
                                     else:
                                         try:
+                                            # [쓰기] 최신 데이터 로드
                                             refresh_logs = read_data_with_retry(worksheet="Logs", ttl=0)
                                             refresh_logs['Coin_Clean'] = refresh_logs['Coin_No'].apply(lambda x: clean_numeric_str(x, 4))
                                             
@@ -763,6 +766,7 @@ def main():
                 if selected_subcon != get_text("select_default"):
                     current_balance = 0
                     try:
+                        # [읽기] 캐시된 로그 사용
                         subcon_logs = get_cached_subcon_logs()
                         if not subcon_logs.empty and 'Subcon_Name' in subcon_logs.columns:
                             df_s = subcon_logs[subcon_logs['Subcon_Name'] == selected_subcon]
@@ -785,6 +789,7 @@ def main():
                     
                     col_q, col_r = st.columns([1, 3])
                     
+                    # [위젯 에러 수정] 초기값 확인 후 생성
                     if 'subcon_qty_input' not in st.session_state:
                         st.session_state['subcon_qty_input'] = 1
                     
@@ -820,6 +825,7 @@ def main():
                                 }
                                 
                                 try:
+                                    # [쓰기] 최신 데이터 로드
                                     existing_logs = read_data_with_retry(worksheet="Subcon_Logs", ttl=0)
                                     updated_logs = pd.concat([existing_logs, pd.DataFrame([new_record])], ignore_index=True)
                                 except Exception:
@@ -834,9 +840,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
