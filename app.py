@@ -330,7 +330,7 @@ def main():
             # 쿠키가 손상되었거나 형식이 안 맞으면 무시
             pass
 
-    # --- 사이드바 ---
+# --- 사이드바 ---
     with st.sidebar:
         st.header("Settings")
         lang_choice = st.radio("Language", ["Korean", "English"], 
@@ -342,14 +342,22 @@ def main():
             role_display = "Admin" if st.session_state['user_role'] == "Master" else "User"
             st.info(get_text("welcome", st.session_state['user_name'], role_display))
             
-            # [로그아웃] 쿠키 삭제 포함
+            # [수정된 로그아웃 로직]
             if st.button(get_text("logout_btn")):
-                # 1. 쿠키 삭제
+                # 1. 쿠키 삭제 명령
                 cookie_manager.delete("fgip4_auth")
-                # 2. 세션 초기화
+                
+                # 2. 세션 상태 초기화
                 st.session_state['logged_in'] = False
                 st.session_state['user_role'] = ""
-                # 3. 새로고침 (즉시 로그인 화면으로)
+                st.session_state['user_name'] = ""
+                st.session_state['user_id'] = ""
+                
+                # 3. [중요] 브라우저가 쿠키를 지울 시간을 줌 (1초 대기)
+                st.toast("로그아웃 중입니다...", icon="👋")
+                time.sleep(1) 
+                
+                # 4. 새로고침
                 st.rerun()
 
     # --- 로그인 화면 ---
@@ -822,6 +830,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
