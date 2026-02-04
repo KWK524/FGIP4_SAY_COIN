@@ -80,7 +80,19 @@ LANG = {
         "subcon_warn_reason": "사유를 입력해주세요.",
         "subcon_warn_balance": "보유 수량이 부족합니다.",
         "subcon_success_give": "협력사 지급 완료!",
-        "subcon_success_use": "협력사 사용 완료!"
+        "subcon_success_use": "협력사 사용 완료!",
+        "shortcut_caption": "바로가기 아이콘 만들기",
+        "shortcut_title": "📲 홈 화면에 추가하는 법",
+        "ios_guide": """
+        **1.** Safari 브라우저 하단 **[공유]** 버튼 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mail_iOS_Share_Icon.svg/1200px-Mail_iOS_Share_Icon.svg.png" width="15"> 클릭
+        \n**2.** 메뉴를 올려서 **[홈 화면에 추가]** 선택
+        \n**3.** 우측 상단 **[추가]** 클릭
+        """,
+        "android_guide": """
+        **1.** Chrome 브라우저 우측 상단 **[점 3개]** 메뉴 클릭
+        \n**2.** **[홈 화면에 추가]** 또는 **[앱 설치]** 선택
+        \n**3.** **[추가]** 버튼 클릭
+        """
     },
     "EN": {
         "title": "FGIP4 S.A.Y COIN",
@@ -151,7 +163,19 @@ LANG = {
         "subcon_warn_reason": "Please enter a reason.",
         "subcon_warn_balance": "Insufficient balance.",
         "subcon_success_give": "Provision Success!",
-        "subcon_success_use": "Redemption Success!"
+        "subcon_success_use": "Redemption Success!",
+        "shortcut_caption": "Create App Shortcut",
+        "shortcut_title": "📲 Add to Home Screen",
+        "ios_guide": """
+        **1.** Tap **[Share]** <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mail_iOS_Share_Icon.svg/1200px-Mail_iOS_Share_Icon.svg.png" width="15"> in Safari
+        \n**2.** Scroll down & select **[Add to Home Screen]**
+        \n**3.** Tap **[Add]** (Top right)
+        """,
+        "android_guide": """
+        **1.** Tap **[Menu]** (3 dots) in Chrome (Top right)
+        \n**2.** Select **[Add to Home Screen]** or **[Install App]**
+        \n**3.** Tap **[Add]**
+        """
     }
 }
 
@@ -362,24 +386,16 @@ def main():
 
             # [추가] 홈 화면 추가 가이드 (맨 아래에 위치)
             st.divider()
-            st.caption("바로가기 아이콘 만들기")
+        st.caption(get_text("shortcut_caption"))
         
-            with st.expander("📲 홈 화면에 추가하는 법"):
-                tab_ios, tab_android = st.tabs(["iPhone", "Android"])
+        with st.expander(get_text("shortcut_title")):
+            tab_ios, tab_android = st.tabs(["iPhone", "Android"])
             
-                with tab_ios:
-                    st.markdown("""
-                    **1.** Safari 브라우저 하단 **[공유]** 버튼 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mail_iOS_Share_Icon.svg/1200px-Mail_iOS_Share_Icon.svg.png" width="20"> 클릭
-                    \n**2.** 메뉴를 올려서 **[홈 화면에 추가]** 선택
-                    \n**3.** 우측 상단 **[추가]** 클릭
-                    """, unsafe_allow_html=True)
+            with tab_ios:
+                st.markdown(get_text("ios_guide"), unsafe_allow_html=True)
                 
-                with tab_android:
-                    st.markdown("""
-                    **1.** Chrome 브라우저 우측 상단 **[점 3개]** 메뉴 클릭
-                    \n**2.** **[홈 화면에 추가]** 또는 **[앱 설치]** 선택
-                    \n**3.** **[추가]** 버튼 클릭
-                    """)
+            with tab_android:
+                st.markdown(get_text("android_guide"))
 
     # --- 로그인 화면 ---
     if not st.session_state['logged_in']:
@@ -861,4 +877,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
