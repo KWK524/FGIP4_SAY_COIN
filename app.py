@@ -84,7 +84,7 @@ LANG = {
         "shortcut_caption": "바로가기 아이콘 만들기",
         "shortcut_title": "📲 홈 화면에 추가하는 법",
         "ios_guide": """
-        **1.** Safari 브라우저 하단 **[공유]** 버튼 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mail_iOS_Share_Icon.svg/1200px-Mail_iOS_Share_Icon.svg.png" width="15"> 클릭
+        **1.** Safari 브라우저 하단 **[공유]** 버튼(📤) 클릭
         \n**2.** 메뉴를 올려서 **[홈 화면에 추가]** 선택
         \n**3.** 우측 상단 **[추가]** 클릭
         """,
@@ -167,7 +167,7 @@ LANG = {
         "shortcut_caption": "Create App Shortcut",
         "shortcut_title": "📲 Add to Home Screen",
         "ios_guide": """
-        **1.** Tap **[Share]** <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mail_iOS_Share_Icon.svg/1200px-Mail_iOS_Share_Icon.svg.png" width="15"> in Safari
+        **1.** Tap **[Share]** button (📤) in Safari
         \n**2.** Scroll down & select **[Add to Home Screen]**
         \n**3.** Tap **[Add]** (Top right)
         """,
@@ -877,5 +877,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
