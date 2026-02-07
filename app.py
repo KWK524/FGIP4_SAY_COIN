@@ -12,7 +12,7 @@ st.set_page_config(page_title="FGIP4 S.A.Y COIN", page_icon="🪙")
 # --- 다국어 텍스트 사전 ---
 LANG = {
     "KO": {
-        "title": "FGIP4 S.A.Y COIN",
+        "title": "FGIP4 S.A.Y COIN Platform",
         "login_title": "🏗️ FGIP4 로그인",
         "id_label": "아이디",
         "pw_label": "비밀번호",
@@ -95,7 +95,7 @@ LANG = {
         """
     },
     "EN": {
-        "title": "FGIP4 S.A.Y COIN",
+        "title": "FGIP4 S.A.Y COIN Platform",
         "login_title": "🏗️ FGIP4 Login",
         "id_label": "ID",
         "pw_label": "Password",
@@ -888,3 +888,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
