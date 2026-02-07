@@ -182,7 +182,7 @@ LANG = {
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_text(key, *args):
-    lang_code = st.session_state.get('language', 'KO')
+    lang_code = st.session_state.get('language', 'EN') # [수정] 기본값 EN
     text = LANG[lang_code].get(key, key)
     if args:
         return text.format(*args)
@@ -326,8 +326,15 @@ def main():
         st.session_state['logged_in'] = False
         st.session_state['user_role'] = ""
     
+    # [수정] 언어 초기화 및 쿠키 확인 로직
     if 'language' not in st.session_state:
-        st.session_state['language'] = "KO"
+        # 1. 쿠키에서 언어 설정 확인
+        lang_cookie = cookie_manager.get("fgip4_lang")
+        if lang_cookie in ["KO", "EN"]:
+            st.session_state['language'] = lang_cookie
+        else:
+            # 2. 쿠키 없으면 기본값 EN
+            st.session_state['language'] = "EN"
 
     # 3. [자동 로그인 로직] 
     if st.session_state.get('logout_pressed', False):
@@ -344,7 +351,7 @@ def main():
                         st.session_state['user_name'] = user_name
                         st.session_state['user_id'] = c_id
                         st.session_state['user_role'] = user_role
-                        st.toast(f"자동 로그인 되었습니다: {user_name}", icon="👋")
+                        st.toast(f"Welcome back: {user_name}", icon="👋")
                         time.sleep(0.5)
                         st.rerun()
             except:
@@ -353,9 +360,23 @@ def main():
     # --- 사이드바 ---
     with st.sidebar:
         st.header("Settings")
-        lang_choice = st.radio("Language", ["Korean", "English"], 
-                               index=0 if st.session_state['language'] == "KO" else 1)
-        st.session_state['language'] = "KO" if lang_choice == "Korean" else "EN"
+        
+        # [수정] 언어 선택 로직 (쿠키 저장 포함)
+        lang_options = ["English", "Korean"]
+        # 현재 상태에 따라 인덱스 설정
+        current_idx = 0 if st.session_state['language'] == "EN" else 1
+        
+        lang_choice = st.radio("Language", lang_options, index=current_idx)
+        
+        new_lang = "EN" if lang_choice == "English" else "KO"
+        
+        # 언어가 변경되었을 때만 실행
+        if st.session_state['language'] != new_lang:
+            st.session_state['language'] = new_lang
+            # 쿠키에 언어 설정 저장 (30일 유효)
+            cookie_manager.set("fgip4_lang", new_lang, expires_at=datetime.now() + timedelta(days=30))
+            time.sleep(0.2)
+            st.rerun()
         
         if st.session_state['logged_in']:
             st.divider()
@@ -373,7 +394,7 @@ def main():
                 
                 st.session_state['logout_pressed'] = True
                 
-                st.toast("로그아웃 되었습니다.", icon="👋")
+                st.toast("Logged out.", icon="👋")
                 time.sleep(1) 
                 
                 st.rerun()
@@ -411,7 +432,7 @@ def main():
                     cookie_val = f"{username}:{password}"
                     cookie_manager.set("fgip4_auth", cookie_val, expires_at=datetime.now() + timedelta(days=7))
                     
-                    st.toast("로그인 성공! 이동합니다...", icon="✅")
+                    st.toast("Login Success!", icon="✅")
                     time.sleep(1)
                     st.rerun()
                 else:
@@ -435,12 +456,12 @@ def main():
                 st.error("Categories 시트를 불러올 수 없습니다.")
                 st.stop()
 
-            # --- [추가] 권한 기반 카테고리 필터링 로직 ---
-            # 일반 유저(Master가 아닌 경우)는 Permission 열이 'Master'인 행을 제외함
+            # --- 권한 기반 카테고리 필터링 ---
+            cat_df.columns = cat_df.columns.str.strip()
             if st.session_state['user_role'] != "Master":
                 if 'Permission' in cat_df.columns:
-                    # 빈 값(NaN)은 허용, "Master"라고 적힌 것만 제외
-                    cat_df = cat_df[cat_df['Permission'].fillna("").astype(str) != "Master"]
+                    mask = cat_df['Permission'].fillna("").astype(str).str.strip().str.upper() == "MASTER"
+                    cat_df = cat_df[~mask]
             # -----------------------------------------------
 
             is_ko = (st.session_state['language'] == "KO")
@@ -696,6 +717,7 @@ def main():
                         except Exception as e:
                             st.error(f"Error: {e}")
 
+                # B. 코인 번호 검색 모드
                 else: 
                     col_c1, col_c2 = st.columns([3, 1])
                     search_coin_no = col_c1.text_input(get_text("redeem_coin_search_label"), max_chars=4, key="redeem_coin_search_key")
